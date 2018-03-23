@@ -55,7 +55,10 @@ void Dector::cameraTest(){
     VideoCapture capture(1);
     capture.set(CV_CAP_PROP_FRAME_WIDTH, imageCols);
     capture.set(CV_CAP_PROP_FRAME_HEIGHT, imageRows);
-    int delay = 30;
+    int delay = 0;
+    if(debug) {
+        delay = 30;
+    }
     if (capture.isOpened()) {
         mediaStream(capture, delay);
     }
@@ -67,8 +70,10 @@ void Dector::videoTest(string fileName) {
     capture.open(fileName);
 
     double rate = capture.get(CV_CAP_PROP_FPS);//获取视频文件的帧率
-    int delay = 500;//cvRound(1000.000 / rate);
-    cout << "delay" << delay << endl;
+    int delay = cvRound(1000.000 / rate);
+    if(debug){
+        cout << "delay" << delay << endl;
+    }
 
     if (capture.isOpened()) {
         mediaStream(capture, delay);
@@ -83,41 +88,33 @@ void Dector::mediaStream(VideoCapture capture, int delay){
         capture >> frame;//读出每一帧的图像
         if (frame.empty()) break;
 
+        Mat srcROI(frame, Rect(320, 80, 640, 640));
+
         clock_t start = clock();
 
-        imageProcess(frame, thresholded);
+        imageProcess(srcROI, thresholded);
 
-        totalTime += (clock() - start);
-        count++;
-        if (count == 1) {
-            stringstream ss;
-            ss << (double)(totalTime/count)/CLOCKS_PER_SEC;
-            //设置绘制文本的相关参数
+        if(debug){
+            totalTime += (clock() - start);
+            count++;
+            if (count == 1) {
+                count = 0;
+                totalTime = 0;
 
-            std::string text = ss.str();
-            int font_face = cv::FONT_HERSHEY_COMPLEX;
-            double font_scale = 1;
-            int thickness = 2;
-            int baseline;
-            //获取文本框的长宽
-            cv::Size text_size = cv::getTextSize(text, font_face, font_scale, thickness, &baseline);
-            cv::Point origin;
-            origin.x = imageCols / 2 - text_size.width / 2 - 200;
-            origin.y = imageRows / 2 + text_size.height / 2;
-            cv::putText(frame, text, origin, font_face, font_scale, cv::Scalar(0, 255, 255), thickness, 3, 0);
-
-            count = 0;
-            totalTime = 0;
+                stringstream ss;
+                ss << (double)(totalTime/count)/CLOCKS_PER_SEC;
+                std::string text = ss.str();
+                myPutText(text, srcROI, 100, 100);
+            }
+            imshow("after", thresholded);
+            moveWindow("after", 900, 0);
+            imshow("before", srcROI);
+            moveWindow("before", 0, 0);
         }
 
-        imshow("after", thresholded);
-        moveWindow("after", 900, 0);
-        imshow("before", frame);
-        moveWindow("before", 0, 0);
         if(delay != 0){
             waitKey(delay);
         }
-
     }
 }
 
@@ -144,116 +141,123 @@ void Dector::imageTest(string fileName) {
 
 void Dector::imageProcess(Mat& frame, Mat& thresholded){
     Mat gary;
-
     cvtColor(frame, gary, CV_RGB2GRAY);
 
     clock_t start1 = clock();
-//    threshold(gary, thresholded, 100, 255, THRESH_BINARY);
     adaptiveThreshold(gary, thresholded, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 81, 40);
-    cout << "threshold time:" << (double)(clock() - start1)/CLOCKS_PER_SEC << endl;
+    if(debug) {
+        cout << "threshold time:" << (double)(clock() - start1)/CLOCKS_PER_SEC << endl;
+    }
 
     clock_t start2 = clock();
     vector<Point> points = scanImageEfficiet(thresholded);
-    cout << "scanImageEfficiet time:" << (double)(clock() - start2)/CLOCKS_PER_SEC << endl;
+    if(debug) {
+        cout << "scanImageEfficiet time:" << (double)(clock() - start2)/CLOCKS_PER_SEC << endl;
+    }
 
     clock_t start3 = clock();
     if(points.size() >= 6 && isValidPoint(points[3]) && isValidPoint(points[4]) && isValidPoint(points[5])) {
         errorMeasure(points, frame);
     }
-    cout << "errorMeasure time:" << (double)(clock() - start3)/CLOCKS_PER_SEC << endl;
+    if(debug) {
+        cout << "errorMeasure time:" << (double)(clock() - start3)/CLOCKS_PER_SEC << endl;
 
-    int size = points.size();
-    for(int i = 0; i < size; i++){
-        if(isValidPoint(points[i])) {
-            if(i == 0) {
-                circle(frame, points[i], 3, Scalar(0, 255, 0));
-            } else {
-                circle(frame, points[i], 3, Scalar(0, 0, 255));
+        int size = points.size();
+        for(int i = 0; i < size; i++){
+            if(isValidPoint(points[i])) {
+                if(i == 0) {
+                    circle(frame, points[i], 3, Scalar(0, 255, 0));
+                } else {
+                    circle(frame, points[i], 3, Scalar(0, 0, 255));
+                }
             }
         }
     }
 
+
     if(points.size() >= 6 && isValidPoint(points[0]) && isValidPoint(points[1]) && isValidPoint(points[2])
             && isValidPoint(points[3]) && isValidPoint(points[4]) && isValidPoint(points[5])) {
-        vector<int> edges = calculateEdges(points);
-        int col_gap = 0;
-        int row_gap = 0;
-        if(points[5].y <= imageRows/3) {
-            col_gap = EDGE_CENTRE_COL_GAP_1;
-            row_gap = EDGE_CENTRE_ROW_GAP_1;
-        } else if(points[5].y > imageRows/3 && points[5].y <= 2*imageRows/3) {
-            col_gap = EDGE_CENTRE_COL_GAP_2;
-            row_gap = EDGE_CENTRE_ROW_GAP_2;
-        } else if(points[5].y > 2*imageRows/3) {
-            col_gap = EDGE_CENTRE_COL_GAP_3;
-            row_gap = EDGE_CENTRE_ROW_GAP_3;
-        }
-        Point p1 = {edges[0] - col_gap, edges[2] - row_gap};
-        Point p2 = {edges[1] + col_gap, edges[3] + row_gap};
-        rectangle(frame, p1, p2, Scalar(0, 0, 255), 1, 1, 0);
-
         centre_x = points[5].x;
         centre_y = points[5].y;
 
         clock_t start4 = clock();
         vector<Point> encodePoints;
         decode_value = decodeImage(thresholded, points, encodePoints);
-        cout << "decode time:" << (double)(clock() - start4)/CLOCKS_PER_SEC << endl;
-//        cout << "decode value = " << decode_value << endl;
 
-        for(vector<Point>::iterator it = encodePoints.begin(); it != encodePoints.end(); ++it) {
-            if(it->x != 0 && it->y != 0) {
-                circle(frame, *it, 3, Scalar(0, 245, 255));
+        if(debug) {
+            myPutText(to_string(decode_value), frame, 100, 300);
+            cout << "decode time:" << (double)(clock() - start4)/CLOCKS_PER_SEC << endl;
+            for(vector<Point>::iterator it = encodePoints.begin(); it != encodePoints.end(); ++it) {
+                if(it->x != 0 && it->y != 0) {
+                    circle(frame, *it, 3, Scalar(0, 245, 255));
+                }
             }
+            vector<int> edges = calculateEdges(points);
+            int col_gap = 0;
+            int row_gap = 0;
+            if(points[5].y <= imageRows/3) {
+                col_gap = EDGE_CENTRE_COL_GAP_1;
+                row_gap = EDGE_CENTRE_ROW_GAP_1;
+            } else if(points[5].y > imageRows/3 && points[5].y <= 2*imageRows/3) {
+                col_gap = EDGE_CENTRE_COL_GAP_2;
+                row_gap = EDGE_CENTRE_ROW_GAP_2;
+            } else if(points[5].y > 2*imageRows/3) {
+                col_gap = EDGE_CENTRE_COL_GAP_3;
+                row_gap = EDGE_CENTRE_ROW_GAP_3;
+            }
+            Point p1 = {edges[0] - col_gap, edges[2] - row_gap};
+            Point p2 = {edges[1] + col_gap, edges[3] + row_gap};
+            rectangle(frame, p1, p2, Scalar(0, 0, 255), 1, 1, 0);
         }
     }
 }
 
 void Dector::errorMeasure(vector<Point> & points, Mat& img){
-    line(img, Point(CAR_CENTRE_COL, 0), Point(CAR_CENTRE_COL, imageRows), Scalar(255, 215, 0), 1, 8, 0);
-    line(img, Point(0, CAR_CENTRE_ROW), Point(imageCols, CAR_CENTRE_ROW), Scalar(255, 215, 0), 1, 8, 0);
+    if(debug) {
+        line(img, Point(CAR_CENTRE_COL, 0), Point(CAR_CENTRE_COL, imageRows), Scalar(255, 215, 0), 1, 8, 0);
+        line(img, Point(0, CAR_CENTRE_ROW), Point(imageCols, CAR_CENTRE_ROW), Scalar(255, 215, 0), 1, 8, 0);
+    }
     if(points.size() >= 6 && isValidPoint(points[3]) && isValidPoint(points[4]) && isValidPoint(points[5])) {
-        if((points[3].y - points[5].y)*(points[4].x - points[5].x)
-                == (points[4].y - points[5].y)*(points[3].x - points[5].x)) {
-            line(img, points[4], points[3], Scalar(255, 0, 0), 1, 8, 0);
-        } else {
-            line(img, points[3], points[5], Scalar(0, 255, 0), 1, 8, 0);
-            line(img, points[4], points[5], Scalar(0, 0, 255), 1, 8, 0);
-        }
-
-        float vertical_sum_x2 = pow(points[3].x, 2) + pow(points[4].x, 2) + pow(points[5].x, 2);
-        float vertical_sum_x = points[3].x + points[4].x + points[5].x;
-        float vertical_sum_y = points[3].y + points[4].y + points[5].y;
-        float vertical_sum_xy = points[3].x*points[3].y + points[4].x*points[4].y + points[5].x*points[5].y;
-
-        float vertical_mm = (3*vertical_sum_x2 - pow(vertical_sum_x, 2));
-        double angle_vertical = 90;
-        if(vertical_mm != 0) {
-//            float B0 = (vertical_sum_x2 * vertical_sum_y - vertical_sum_x * vertical_sum_xy)/vertical_mm;
-            float B1 = (3*vertical_sum_xy - vertical_sum_x*vertical_sum_y)/vertical_mm;
-            if(B1 >= 0) {
-                angle_vertical = atan(B1)*180/M_PI;
+        if(debug) {
+            if((points[3].y - points[5].y)*(points[4].x - points[5].x)
+                    == (points[4].y - points[5].y)*(points[3].x - points[5].x)) {
+                line(img, points[4], points[3], Scalar(255, 0, 0), 1, 8, 0);
             } else {
-                angle_vertical = 180 + atan(B1)*180/M_PI;
+                line(img, points[3], points[5], Scalar(0, 255, 0), 1, 8, 0);
+                line(img, points[4], points[5], Scalar(0, 0, 255), 1, 8, 0);
             }
         }
+        if(false) {//角度误差暂时不用
+            float vertical_sum_x2 = pow(points[3].x, 2) + pow(points[4].x, 2) + pow(points[5].x, 2);
+            float vertical_sum_x = points[3].x + points[4].x + points[5].x;
+            float vertical_sum_y = points[3].y + points[4].y + points[5].y;
+            float vertical_sum_xy = points[3].x*points[3].y + points[4].x*points[4].y + points[5].x*points[5].y;
 
+            float vertical_mm = (3*vertical_sum_x2 - pow(vertical_sum_x, 2));
+            double angle_vertical = 90;
+            if(vertical_mm != 0) {
+                float B1 = (3*vertical_sum_xy - vertical_sum_x*vertical_sum_y)/vertical_mm;
+                if(B1 >= 0) {
+                    angle_vertical = atan(B1)*180/M_PI;
+                } else {
+                    angle_vertical = 180 + atan(B1)*180/M_PI;
+                }
+            }
 
+            float horizontal_sum_x2 = pow(points[1].x, 2) + pow(points[2].x, 2) + pow(points[5].x, 2);
+            float horizontal_sum_x = points[1].x + points[2].x + points[5].x;
+            float horizontal_sum_y = points[1].y + points[2].y + points[5].y;
+            float horizontal_sum_xy = points[1].x*points[1].y + points[2].x*points[2].y + points[5].x*points[5].y;
 
-        float horizontal_sum_x2 = pow(points[1].x, 2) + pow(points[2].x, 2) + pow(points[5].x, 2);
-        float horizontal_sum_x = points[1].x + points[2].x + points[5].x;
-        float horizontal_sum_y = points[1].y + points[2].y + points[5].y;
-        float horizontal_sum_xy = points[1].x*points[1].y + points[2].x*points[2].y + points[5].x*points[5].y;
-
-        float horizontal_mm = (3*horizontal_sum_x2 - pow(horizontal_sum_x, 2));
-        double angle_horizontal = 90;
-        if(horizontal_mm != 0) {
-//            float B0 = (horizontal_sum_x2 * horizontal_sum_y - horizontal_sum_x * horizontal_sum_xy)/horizontal_mm;
-            float B1 = (3*horizontal_sum_xy - horizontal_sum_x*horizontal_sum_y)/horizontal_mm;
-            angle_horizontal = atan(B1)*180/M_PI;
+            float horizontal_mm = (3*horizontal_sum_x2 - pow(horizontal_sum_x, 2));
+            double angle_horizontal = 90;
+            if(horizontal_mm != 0) {
+                float B1 = (3*horizontal_sum_xy - horizontal_sum_x*horizontal_sum_y)/horizontal_mm;
+                angle_horizontal = atan(B1)*180/M_PI;
+            }
+            angle_err = angle_horizontal;
         }
 
-        angle_err = angle_horizontal;
         position_err = CAR_CENTRE_COL - points[5].x;
     }
 }
@@ -266,9 +270,6 @@ int Dector::decodeImage(Mat& thresholded, vector<Point>& kernelPoints, vector<Po
     int width = kernelPoints[2].x - kernelPoints[1].x + 70;
     int high = kernelPoints[4].y - kernelPoints[3].y + 40;
     Mat thresholdedROI(thresholded, Rect(cols, rows, width, high));
-    cout << "xxxx=" << cols << "yyy=" << rows << endl;
-    imshow(" thresholdedROI", thresholdedROI);
-    moveWindow(" thresholdedROI", 0, 1000);
 
     vector<int> edges = calculateEdges(kernelPoints);
     if(edges.size() < 4) {
@@ -290,11 +291,8 @@ int Dector::decodeImage(Mat& thresholded, vector<Point>& kernelPoints, vector<Po
     Mat cannyMat;
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
-    clock_t start3 = clock();
     Canny( thresholdedROI, cannyMat, g_nThresh, g_nThresh*2, 3 );
     findContours( cannyMat, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
-    cout << "canny time:" << (double)(clock() - start3)/CLOCKS_PER_SEC << endl;
-    cout << "canny size" << contours.size() << "area = " << area << endl;
 
     vector<Point> bottom_left, bottom_right, top_right;
     Direction bottom_left_relative_dir, bottom_right_relative_dir, top_right_relative_dir;
@@ -334,8 +332,6 @@ int Dector::decodeImage(Mat& thresholded, vector<Point>& kernelPoints, vector<Po
 
     int top_right_value = decodeArea(top_right, top_right_p1, top_right_p2, top_right_relative_dir);
 
-    int u = bottom_right_value << 4;
-
     result = (top_right_value << 8) + (bottom_right_value << 4) + bottom_left_value;
 
     //画轮廓及其质心并显示
@@ -355,11 +351,8 @@ int Dector::decodeArea(vector<Point> encodePoints, Point& p1, Point& p2, Directi
     int result = 0;
     for(vector<Point>::iterator it = encodePoints.begin(); it != encodePoints.end(); it++) {
         int tmp = judgePosition(*it, p1, p2, relative_dir);
-//        cout << "x = " << it->x << "  y = " << it->y << "   angle = " << calculateAngle(p1, p2, *it) << "  position = " << tmp << endl;
         result += tmp;
     }
-//    cout << "result = " << result << endl;
-//    cout << endl;
 
     return result;
 }
@@ -482,8 +475,10 @@ vector<Point> Dector::scanImageEfficiet(Mat & image) {
                 if(row_1 == row_2) {//可以去掉这个校验，因为加了上面lineWidth = 0;
                     Line line = {row_1, (j - lineWidth)%imageCols, (j-1)%imageCols,lineWidth, false};
                     lines.push_back(line);
-                    p[line.row*imageCols + line.startCol] = 150;
-                    p[line.row*imageCols + line.endCol] = 150;
+                    if(debug) {
+                        p[line.row*imageCols + line.startCol] = 150;
+                        p[line.row*imageCols + line.endCol] = 150;
+                    }
                 } else {
                     cout << "bu zai tong yi hang!!!!!!!!!!!!!!!!!!!! " << endl;
                 }
@@ -499,8 +494,10 @@ vector<Point> Dector::scanImageEfficiet(Mat & image) {
                 if(row_1 == row_2) {
                     Line line = {row_1, (j - lineWidth)%imageCols, (j-1)%imageCols, lineWidth, true};
                     lines.push_back(line);
-                    p[line.row*imageCols + line.startCol] = 50;
-                    p[line.row*imageCols + line.endCol] = 50;
+                    if(debug) {
+                        p[line.row*imageCols + line.startCol] = 50;
+                        p[line.row*imageCols + line.endCol] = 50;
+                    }
                 } else {
                     cout << "bu zai tong yi hang!!!!!!!!!!!!!!!!!! " << endl;
                 }
@@ -511,16 +508,12 @@ vector<Point> Dector::scanImageEfficiet(Mat & image) {
         }
         count++;
     }
-//    cout << "rows:" << rows << endl;
-//    cout << "lines size:" << lines.size() << endl;
     vector<Kernel> kernels;
     analyseLines(lines, kernels, p);
-//    cout << "kernels size:" << kernels.size() << endl;
 
     if(kernels.size() > 10) {
         points = analyseKernels(kernels);
     }
-
 
     return points;
 }
@@ -1006,3 +999,12 @@ void Dector::setP1P2(Direction direction, Point& P1, Point& P2, vector<Point> &k
         P2 = kernelPoints[3];
     }
 }
+ void Dector::myPutText(string text, Mat src, int x, int y){
+     int font_face = cv::FONT_HERSHEY_COMPLEX;
+     double font_scale = 1;
+     int thickness = 2;
+     Point origin;
+     origin.x = x;
+     origin.y = y;
+     putText(src, text, origin, font_face, font_scale, cv::Scalar(0, 255, 255), thickness, 3, 0);
+ }

@@ -14,6 +14,7 @@ using namespace std;
 
 class Dector {
 private:
+    bool debug = true;
     const static int RATIO = 2;//1代表640x480,2代表1280x720
     int CAR_CENTRE_COL = 0;
     int CAR_CENTRE_ROW = 0;
@@ -85,6 +86,7 @@ public:
     int judgePosition(Point&, Point&, Point&, Direction);
     Direction rotateDirection(Direction, Direction);
     void setP1P2(Direction, Point&, Point&, vector<Point>&);
+    void myPutText(string text, Mat src, int x, int y);
 };
 
 #endif // DECTOR_H

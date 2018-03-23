@@ -46,7 +46,7 @@ int main(int argc, char *argv[]){
 //    dector.cameraTest();
 
     for(int i = 1; i <= 18; i++) {
-        dector.imageTest("/home/nvidia/Documents/images/" + to_string(i) + ".JPG");
+        dector.imageTest("C:\\Users\\xxxta\\Desktop\\images\\" + to_string(i) + ".JPG");
     }
     return 0;
 }
@@ -85,19 +85,19 @@ void turnRight(){
     stop = true;
     char buf1[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
     mySerialPort.WriteData(buf1, 13);
-    cout << "motro car stop!!!!!!" << endl;
+//    cout << "motro car stop!!!!!!" << endl;
 
 //    usleep(1000000);
 
     char buf2[13] = {'&','V','=','+','0','7','5','/','-','0','7','5','&'};
     mySerialPort.WriteData(buf2, 13);
-    cout << "motro car turn right" << endl;
+//    cout << "motro car turn right" << endl;
 
     usleep(1270000);
 
     char buf3[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
     mySerialPort.WriteData(buf3, 13);
-    cout << "motro car stop!!!!!!" << endl;
+//    cout << "motro car stop!!!!!!" << endl;
 //    usleep(1000);
     stop = false;
 
