@@ -79,7 +79,7 @@ public:
     vector<int> calculateEdges(vector<Point>&);
     int decodeImage(Mat&, vector<Point> &, vector<Point>&);
     Direction calculDirection(int, int, int, int , vector<int> edges);
-    int decodeArea(vector<Point> encodePoints, Point &p1, Point &p2, Direction);
+    int decodeArea(vector<Point> encodePoints, Point &p1, Point &p2, Point &p5, Direction);
     void errorMeasure(vector<Point>&, Mat&);
     double calculateAngle(Point&, Point&, Point&);
     void removeRepeat(vector<Point> &, vector<Point> &, int, int);

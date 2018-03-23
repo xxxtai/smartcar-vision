@@ -326,11 +326,11 @@ int Dector::decodeImage(Mat& thresholded, vector<Point>& kernelPoints, vector<Po
         }
     }
 
-    int bottom_left_value = decodeArea(bottom_left, bottom_left_p1, bottom_left_p2, bottom_left_relative_dir);
+    int bottom_left_value = decodeArea(bottom_left, bottom_left_p1, bottom_left_p2, kernelPoints[5], bottom_left_relative_dir);
 
-    int bottom_right_value = decodeArea(bottom_right, bottom_right_p1, bottom_right_p2, bottom_right_relative_dir);
+    int bottom_right_value = decodeArea(bottom_right, bottom_right_p1, bottom_right_p2, kernelPoints[5], bottom_right_relative_dir);
 
-    int top_right_value = decodeArea(top_right, top_right_p1, top_right_p2, top_right_relative_dir);
+    int top_right_value = decodeArea(top_right, top_right_p1, top_right_p2, kernelPoints[5], top_right_relative_dir);
 
     result = (top_right_value << 8) + (bottom_right_value << 4) + bottom_left_value;
 
@@ -347,13 +347,42 @@ int Dector::decodeImage(Mat& thresholded, vector<Point>& kernelPoints, vector<Po
     return result;
 }
 
-int Dector::decodeArea(vector<Point> encodePoints, Point& p1, Point& p2, Direction relative_dir) {
+int Dector::decodeArea(vector<Point> encodePoints, Point& p1, Point& p2, Point& p5, Direction relative_dir) {
     int result = 0;
+    int count = encodePoints.size();
+    if(count == 4) {
+        return 15;
+    }
+    int tmpValues[4] = {0, 0, 0, 0};
+    int index = 0;
     for(vector<Point>::iterator it = encodePoints.begin(); it != encodePoints.end(); it++) {
         int tmp = judgePosition(*it, p1, p2, relative_dir);
+        tmpValues[index] = tmp;
+        index++;
         result += tmp;
     }
 
+    if((result == 2 && count == 1) || (result == 13 && count == 3)) {
+        return result;
+    }
+
+    if(result & 2 == 2 && count == 2) {
+        int value_2_index = 0;
+        int value_8_index = 0;
+        for(int i = 0; i < 4; i++) {
+            if(tmpValues[i] != 0) {
+                if(tmpValues[i] == 2) {
+                    value_2_index = i;
+                } else {
+                    value_8_index = i;
+                }
+            }
+        }
+        double angle = calculateAngle(p5, encodePoints[value_8_index], encodePoints[value_2_index]);
+        if(abs(180 - angle) <= SAME_LINE_ANGLE) {
+            result = 10;
+        }
+    }
     return result;
 }
 
