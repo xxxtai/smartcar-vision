@@ -43,11 +43,11 @@ int main(int argc, char *argv[]){
     thread th2(setTimer);
 
 //    dector.videoTest("/home/nvidia/Documents/images/1.AVI");//
-    dector.cameraTest();
+//    dector.cameraTest();
 
-//    for(int i = 1; i <= 12; i++) {
-//        dector.imageTest("C:\\Users\\xxxta\\Desktop\\images\\" + to_string(i) + ".JPG");
-//    }
+    for(int i = 1; i <= 18; i++) {
+        dector.imageTest("/home/nvidia/Documents/images/" + to_string(i) + ".JPG");
+    }
     return 0;
 }
 

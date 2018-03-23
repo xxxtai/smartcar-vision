@@ -67,7 +67,7 @@ void Dector::videoTest(string fileName) {
     capture.open(fileName);
 
     double rate = capture.get(CV_CAP_PROP_FPS);//获取视频文件的帧率
-    int delay = cvRound(1000.000 / rate);
+    int delay = 500;//cvRound(1000.000 / rate);
     cout << "delay" << delay << endl;
 
     if (capture.isOpened()) {
@@ -89,8 +89,23 @@ void Dector::mediaStream(VideoCapture capture, int delay){
 
         totalTime += (clock() - start);
         count++;
-        if (count == 2) {
-//            cout <<"Running  Time  : "<< (double)(totalTime/count)/CLOCKS_PER_SEC << endl;
+        if (count == 1) {
+            stringstream ss;
+            ss << (double)(totalTime/count)/CLOCKS_PER_SEC;
+            //设置绘制文本的相关参数
+
+            std::string text = ss.str();
+            int font_face = cv::FONT_HERSHEY_COMPLEX;
+            double font_scale = 1;
+            int thickness = 2;
+            int baseline;
+            //获取文本框的长宽
+            cv::Size text_size = cv::getTextSize(text, font_face, font_scale, thickness, &baseline);
+            cv::Point origin;
+            origin.x = imageCols / 2 - text_size.width / 2 - 200;
+            origin.y = imageRows / 2 + text_size.height / 2;
+            cv::putText(frame, text, origin, font_face, font_scale, cv::Scalar(0, 255, 255), thickness, 3, 0);
+
             count = 0;
             totalTime = 0;
         }
@@ -108,18 +123,20 @@ void Dector::mediaStream(VideoCapture capture, int delay){
 
 void Dector::imageTest(string fileName) {
     Mat frame = imread(fileName);
+    Mat srcROI(frame, Rect(320, 80, 640, 640));
     Mat thresholded;
 
     clock_t start = clock();
 
-    imageProcess(frame, thresholded);
+    imageProcess(srcROI, thresholded);
 
     cout << "precessed time:" << (double)(clock() - start)/CLOCKS_PER_SEC << endl;
     cout << "fileName:" << fileName << endl;
+    cout << endl;
 
     imshow(" after", thresholded);
     moveWindow(" after", 900, 0);
-    imshow(" before", frame);
+    imshow(" before", srcROI);
     moveWindow(" before", 0, 0);
 
     waitKey(0);
@@ -127,11 +144,24 @@ void Dector::imageTest(string fileName) {
 
 void Dector::imageProcess(Mat& frame, Mat& thresholded){
     Mat gary;
+
     cvtColor(frame, gary, CV_RGB2GRAY);
 
+    clock_t start1 = clock();
+//    threshold(gary, thresholded, 100, 255, THRESH_BINARY);
     adaptiveThreshold(gary, thresholded, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 81, 40);
+    cout << "threshold time:" << (double)(clock() - start1)/CLOCKS_PER_SEC << endl;
 
+    clock_t start2 = clock();
     vector<Point> points = scanImageEfficiet(thresholded);
+    cout << "scanImageEfficiet time:" << (double)(clock() - start2)/CLOCKS_PER_SEC << endl;
+
+    clock_t start3 = clock();
+    if(points.size() >= 6 && isValidPoint(points[3]) && isValidPoint(points[4]) && isValidPoint(points[5])) {
+        errorMeasure(points, frame);
+    }
+    cout << "errorMeasure time:" << (double)(clock() - start3)/CLOCKS_PER_SEC << endl;
+
     int size = points.size();
     for(int i = 0; i < size; i++){
         if(isValidPoint(points[i])) {
@@ -164,20 +194,19 @@ void Dector::imageProcess(Mat& frame, Mat& thresholded){
 
         centre_x = points[5].x;
         centre_y = points[5].y;
+
+        clock_t start4 = clock();
         vector<Point> encodePoints;
         decode_value = decodeImage(thresholded, points, encodePoints);
+        cout << "decode time:" << (double)(clock() - start4)/CLOCKS_PER_SEC << endl;
 //        cout << "decode value = " << decode_value << endl;
+
         for(vector<Point>::iterator it = encodePoints.begin(); it != encodePoints.end(); ++it) {
             if(it->x != 0 && it->y != 0) {
                 circle(frame, *it, 3, Scalar(0, 245, 255));
             }
         }
     }
-
-    if(points.size() >= 6 && isValidPoint(points[3]) && isValidPoint(points[4]) && isValidPoint(points[5])) {
-        errorMeasure(points, frame);
-    }
-
 }
 
 void Dector::errorMeasure(vector<Point> & points, Mat& img){
@@ -231,6 +260,16 @@ void Dector::errorMeasure(vector<Point> & points, Mat& img){
 
 int Dector::decodeImage(Mat& thresholded, vector<Point>& kernelPoints, vector<Point>& encodePoints) {
     int result = 0;
+
+    int cols = kernelPoints[1].x - 30;
+    int rows = kernelPoints[3].y - 20;
+    int width = kernelPoints[2].x - kernelPoints[1].x + 70;
+    int high = kernelPoints[4].y - kernelPoints[3].y + 40;
+    Mat thresholdedROI(thresholded, Rect(cols, rows, width, high));
+    cout << "xxxx=" << cols << "yyy=" << rows << endl;
+    imshow(" thresholdedROI", thresholdedROI);
+    moveWindow(" thresholdedROI", 0, 1000);
+
     vector<int> edges = calculateEdges(kernelPoints);
     if(edges.size() < 4) {
         return 0;
@@ -251,8 +290,11 @@ int Dector::decodeImage(Mat& thresholded, vector<Point>& kernelPoints, vector<Po
     Mat cannyMat;
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
-    Canny( thresholded, cannyMat, g_nThresh, g_nThresh*2, 3 );
+    clock_t start3 = clock();
+    Canny( thresholdedROI, cannyMat, g_nThresh, g_nThresh*2, 3 );
     findContours( cannyMat, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+    cout << "canny time:" << (double)(clock() - start3)/CLOCKS_PER_SEC << endl;
+    cout << "canny size" << contours.size() << "area = " << area << endl;
 
     vector<Point> bottom_left, bottom_right, top_right;
     Direction bottom_left_relative_dir, bottom_right_relative_dir, top_right_relative_dir;
@@ -260,13 +302,15 @@ int Dector::decodeImage(Mat& thresholded, vector<Point>& kernelPoints, vector<Po
     Direction locateDir = calculDirection(kernelPoints[0].x, kernelPoints[0].y, centreCol, centreRow, edges);
     for( int i = 0; i < (int)contours.size(); i++ ) {
         Rect rect = boundingRect(contours.at(i));
-        int x = rect.x + rect.width/2;
-        int y = rect.y + rect.height/2;
+        int x = rect.x + rect.width/2 + cols;
+        int y = rect.y + rect.height/2 + rows;
+
         if(rect.area() > area && rect.width < 46 && rect.height < 46) {
             Direction relative_dir = calculDirection(x, y, centreCol, centreRow, edges);
             if(relative_dir == NO) {
                 continue;
             }
+
             Direction realDir = rotateDirection(locateDir, relative_dir);
             if(realDir == BOTTOM_LEFT) {
                 bottom_left_relative_dir = relative_dir;
