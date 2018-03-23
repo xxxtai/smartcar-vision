@@ -11,7 +11,7 @@ TX2UART mySerialPort;
 float err_last = 0;
 int D_value = 0;
 float integral = 0;
-float Kp = 0.1,Ki = 0,Kd = 0;
+float Kp = 0.12,Ki = 0,Kd = 0.0;
 unsigned char speed = 150;
 bool stop = false;
 double lastTime = 0;
@@ -42,8 +42,8 @@ int main(int argc, char *argv[]){
     thread th1(MotroCarControl);
     thread th2(setTimer);
 
-    dector.videoTest("/home/nvidia/Documents/images/1.AVI");//
-//    dector.cameraTest();
+//    dector.videoTest("/home/nvidia/Documents/images/1.AVI");//
+    dector.cameraTest();
 
 //    for(int i = 1; i <= 12; i++) {
 //        dector.imageTest("C:\\Users\\xxxta\\Desktop\\images\\" + to_string(i) + ".JPG");
@@ -93,7 +93,7 @@ void turnRight(){
     mySerialPort.WriteData(buf2, 13);
     cout << "motro car turn right" << endl;
 
-    usleep(1300000);
+    usleep(1270000);
 
     char buf3[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
     mySerialPort.WriteData(buf3, 13);

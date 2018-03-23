@@ -55,7 +55,7 @@ void Dector::cameraTest(){
     VideoCapture capture(1);
     capture.set(CV_CAP_PROP_FRAME_WIDTH, imageCols);
     capture.set(CV_CAP_PROP_FRAME_HEIGHT, imageRows);
-    int delay = 0;
+    int delay = 30;
     if (capture.isOpened()) {
         mediaStream(capture, delay);
     }
@@ -90,15 +90,15 @@ void Dector::mediaStream(VideoCapture capture, int delay){
         totalTime += (clock() - start);
         count++;
         if (count == 2) {
-            cout <<"Running  Time  : "<< (double)(totalTime/count)/CLOCKS_PER_SEC << endl;
+//            cout <<"Running  Time  : "<< (double)(totalTime/count)/CLOCKS_PER_SEC << endl;
             count = 0;
             totalTime = 0;
         }
 
-//        imshow("after", thresholded);
-//        moveWindow("after", 900, 0);
-//        imshow("before", frame);
-//        moveWindow("before", 0, 0);
+        imshow("after", thresholded);
+        moveWindow("after", 900, 0);
+        imshow("before", frame);
+        moveWindow("before", 0, 0);
         if(delay != 0){
             waitKey(delay);
         }
