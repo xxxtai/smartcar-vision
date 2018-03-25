@@ -352,6 +352,8 @@ int Dector::decodeArea(vector<Point> encodePoints, Point& p1, Point& p2, Point& 
     int count = encodePoints.size();
     if(count == 4) {
         return 15;
+    } else if(count == 0) {
+        return 0;
     }
     int tmpValues[4] = {0, 0, 0, 0};
     int index = 0;
