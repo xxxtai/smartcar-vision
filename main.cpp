@@ -3,11 +3,11 @@
 //#include "stdafx.h"
 //#include "SerialPort.h"
 #include <thread>
-//#include "tx2uart.h"
+#include "tx2uart.h"
 #include <unistd.h>
 
 Dector dector;
-//TX2UART mySerialPort;
+TX2UART mySerialPort;
 float err_last = 0;
 int D_value = 0;
 float integral = 0;
@@ -21,7 +21,7 @@ void setTimer();
 void turnRight();
 int main(int argc, char *argv[]){
 
-//    mySerialPort.init_serial();
+    mySerialPort.init_serial();
 
 
 
@@ -42,12 +42,12 @@ int main(int argc, char *argv[]){
     thread th1(MotroCarControl);
     thread th2(setTimer);
 
-//    dector.videoTest("/home/nvidia/Documents/images/1.AVI");//
+    dector.videoTest("/home/nvidia/Documents/images/1.AVI");//
 //    dector.cameraTest();
 
-    for(int i = 1; i <= 18; i++) {
-        dector.imageTest("C:\\Users\\xxxta\\Desktop\\images\\" + to_string(i) + ".JPG");
-    }
+//    for(int i = 1; i <= 18; i++) {
+//        dector.imageTest("/home/nvidia/Documents/images/" + to_string(i) + ".JPG");
+//    }
     return 0;
 }
 
@@ -81,19 +81,19 @@ void turnRight(){
     usleep(600000);
     stop = true;
     char buf1[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
-//    mySerialPort.WriteData(buf1, 13);
+    mySerialPort.WriteData(buf1, 13);
 //    cout << "motro car stop!!!!!!" << endl;
 
 //    usleep(1000000);
 
     char buf2[13] = {'&','V','=','+','0','7','5','/','-','0','7','5','&'};
-//    mySerialPort.WriteData(buf2, 13);
+    mySerialPort.WriteData(buf2, 13);
 //    cout << "motro car turn right" << endl;
 
     usleep(1270000);
 
     char buf3[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
-//    mySerialPort.WriteData(buf3, 13);
+    mySerialPort.WriteData(buf3, 13);
 //    cout << "motro car stop!!!!!!" << endl;
 //    usleep(1000);
     stop = false;
@@ -137,5 +137,5 @@ void PIDControl(){
 //        cout << buf[i];
 //    }
 //    cout << endl;
-//    mySerialPort.WriteData(buf, 13);
+    mySerialPort.WriteData(buf, 13);
 }

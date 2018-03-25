@@ -88,7 +88,10 @@ void Dector::mediaStream(VideoCapture capture, int delay){
         capture >> frame;//读出每一帧的图像
         if (frame.empty()) break;
 
-        Mat srcROI(frame, Rect(320, 80, 640, 640));
+        if(centre_x + roiCols > imageCols) {
+            centre_x = 320;
+        }
+        Mat srcROI(frame, Rect(centre_x, imageRows - roiRows, roiCols, roiRows));
 
         clock_t start = clock();
 
@@ -269,6 +272,18 @@ int Dector::decodeImage(Mat& thresholded, vector<Point>& kernelPoints, vector<Po
     int rows = kernelPoints[3].y - 20;
     int width = kernelPoints[2].x - kernelPoints[1].x + 70;
     int high = kernelPoints[4].y - kernelPoints[3].y + 40;
+    if(cols < 0) {
+        cols = 0;
+    }
+    if(cols + width > roiCols) {
+        width = roiCols - cols;
+    }
+    if(rows < 0) {
+        rows = 0;
+    }
+    if(rows + high > roiRows) {
+        high = roiRows - rows;
+    }
     Mat thresholdedROI(thresholded, Rect(cols, rows, width, high));
 
     vector<int> edges = calculateEdges(kernelPoints);
@@ -332,6 +347,10 @@ int Dector::decodeImage(Mat& thresholded, vector<Point>& kernelPoints, vector<Po
 
     int top_right_value = decodeArea(top_right, top_right_p1, top_right_p2, kernelPoints[5], top_right_relative_dir);
 
+    if(bottom_left_value > 15 || bottom_right_value > 15 || bottom_right_value > 15) {
+        return 0;//error
+    }
+
     result = (top_right_value << 8) + (bottom_right_value << 4) + bottom_left_value;
 
     //画轮廓及其质心并显示
@@ -354,6 +373,8 @@ int Dector::decodeArea(vector<Point> encodePoints, Point& p1, Point& p2, Point& 
         return 15;
     } else if(count == 0) {
         return 0;
+    } else if(count > 4) {//error
+        return 16;
     }
     int tmpValues[4] = {0, 0, 0, 0};
     int index = 0;
@@ -1004,7 +1025,7 @@ Dector::Direction Dector::rotateDirection(Direction locateDir, Direction directi
 void Dector::removeRepeat(vector<Point> & encodes, vector<Point> & encodePoints, int x, int y){
     bool repeat = false;
     for(vector<Point>::iterator it = encodes.begin(); it != encodes.end(); ++it) {
-        if((abs(x - it->x) + abs(y - it->y)) < 5) {
+        if((abs(x - it->x) + abs(y - it->y)) < 8) {
             repeat = true;
             break;
         }
