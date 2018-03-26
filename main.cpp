@@ -25,8 +25,8 @@ int main(int argc, char *argv[]){
     thread th1(MotroCarControl);
     thread th2(setTimer);
 
-    dector.videoTest("/home/nvidia/Documents/images/1.AVI");//
-//    dector.cameraTest();
+//    dector.videoTest("/home/nvidia/Documents/images/1.AVI");//
+    dector.cameraTest();
 
 //    for(int i = 1; i <= 18; i++) {
 //        dector.imageTest("/home/nvidia/Documents/images/" + to_string(i) + ".JPG");
@@ -83,14 +83,20 @@ void turnRight(int time){
     char buf1[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
     QByteArray qb1(QByteArray::fromRawData(buf1, 13));
     serial.send(qb1);
-    cout << "motro car turn!!!!!!" << endl;
+    for(int i = 0; i < 10; i++) {
+        serial.send(qb1);
+    }
+    cout << "motro car stop to turn!" << endl;
 
 //    usleep(1000000);
 
     char buf2[13] = {'&','V','=','+','0','7','5','/','-','0','7','5','&'};
     QByteArray qb2(QByteArray::fromRawData(buf2, 13));
     serial.send(qb2);
-    cout << "motro car turn right" << endl;
+    for(int i = 0; i < 10; i++){
+        serial.send(qb2);
+    }
+    cout << "motro car turning right" << endl;
     sLock.unlock();
 
     usleep(1300000);
@@ -99,8 +105,11 @@ void turnRight(int time){
     char buf3[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
     QByteArray qb3(QByteArray::fromRawData(buf3, 13));
     serial.send(qb3);
+    for(int i = 0; i < 10; i++){
+        serial.send(qb3);
+    }
     sLock.unlock();
-//    cout << "motro car stop!!!!!!" << endl;
+    cout << "motro car finished turning stop!!!" << endl;
 //    usleep(1000000);
     stop = false;
     dector.turned = true;
