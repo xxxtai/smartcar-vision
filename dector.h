@@ -14,7 +14,7 @@ using namespace std;
 
 class Dector {
 private:
-    bool debug = true;
+    bool debug = false;
     const static int RATIO = 2;//1代表640x480,2代表1280x720
     int CAR_CENTRE_COL = 0;
     int CAR_CENTRE_ROW = 0;

@@ -19,7 +19,7 @@ Dector::Dector() {
         AREA_3 = 200;
         imageCols = 640;
         imageRows = 480;
-        CAR_CENTRE_COL = imageCols/2 - 20;
+        CAR_CENTRE_COL = imageCols/2 - 20 - centre_x;
         break;
     case 2:
         LINE_WIDTH_MAX = 50;
@@ -43,8 +43,8 @@ Dector::Dector() {
         AREA_3 = 200;
         imageCols = 1280;
         imageRows = 720;
-        CAR_CENTRE_COL = imageCols/2 - 50;
-        CAR_CENTRE_ROW = imageRows/3 - 78;
+        CAR_CENTRE_COL = imageCols/2 - 50 - centre_x;
+        CAR_CENTRE_ROW = imageRows/3 - 78 - roiRows;
         break;
     default:
         break;
@@ -88,9 +88,11 @@ void Dector::mediaStream(VideoCapture capture, int delay){
         capture >> frame;//读出每一帧的图像
         if (frame.empty()) break;
 
-        if(centre_x + roiCols > imageCols) {
+        if(centre_x + roiCols > frame.cols) {
             centre_x = 320;
         }
+        CAR_CENTRE_COL = frame.cols/2 - 50 - centre_x;
+
         Mat srcROI(frame, Rect(centre_x, imageRows - roiRows, roiCols, roiRows));
 
         clock_t start = clock();

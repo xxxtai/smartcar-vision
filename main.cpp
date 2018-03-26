@@ -14,11 +14,12 @@ float integral = 0;
 float Kp = 0.12,Ki = 0,Kd = 0.0;
 unsigned char speed = 150;
 bool stop = false;
+bool readyToTurn = false;
 double lastTime = 0;
 void MotroCarControl();
 void PIDControl();
 void setTimer();
-void turnRight();
+void turnRight(int time);
 int main(int argc, char *argv[]){
 
     mySerialPort.init_serial();
@@ -42,8 +43,8 @@ int main(int argc, char *argv[]){
     thread th1(MotroCarControl);
     thread th2(setTimer);
 
-    dector.videoTest("/home/nvidia/Documents/images/1.AVI");//
-//    dector.cameraTest();
+//    dector.videoTest("/home/nvidia/Documents/images/1.AVI");//
+    dector.cameraTest();
 
 //    for(int i = 1; i <= 18; i++) {
 //        dector.imageTest("/home/nvidia/Documents/images/" + to_string(i) + ".JPG");
@@ -59,10 +60,22 @@ void MotroCarControl(){
 
     //    integral += dector.position_err;
         int value = dector.decode_value;
-        if((dector.decode_value == 55 || value == 3534 || value == 439 || value == 3422) && dector.centre_y > dector.imageRows*2/3) {
-            turnRight();
+        if(value == 544 || value == 2810 || value == 2570 || value == 2815) {
+            readyToTurn = true;
+	}
+	if(readyToTurn) {
+	    if(dector.centre_y > dector.imageRows*2/3){
+                turnRight(700000);
+            }
+            if(dector.centre_y > dector.imageRows/2){
+                turnRight(800000);
+            }
+            if(dector.centre_y > dector.imageRows/3){
+                turnRight(940000);
+            }
             dector.decode_value = 0;
-        }
+	    readyToTurn = false;
+	}
     }
 }
 
@@ -77,14 +90,14 @@ void setTimer(){
     }
 }
 
-void turnRight(){
-    usleep(600000);
+void turnRight(int time){
+    usleep(time);
     stop = true;
     char buf1[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
     mySerialPort.WriteData(buf1, 13);
 //    cout << "motro car stop!!!!!!" << endl;
 
-//    usleep(1000000);
+    usleep(1000000);
 
     char buf2[13] = {'&','V','=','+','0','7','5','/','-','0','7','5','&'};
     mySerialPort.WriteData(buf2, 13);
@@ -95,7 +108,7 @@ void turnRight(){
     char buf3[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
     mySerialPort.WriteData(buf3, 13);
 //    cout << "motro car stop!!!!!!" << endl;
-//    usleep(1000);
+    usleep(1000000);
     stop = false;
 
 }
