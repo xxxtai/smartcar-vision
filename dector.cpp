@@ -91,9 +91,11 @@ void Dector::mediaStream(VideoCapture capture, int delay){
         if(centre_x + roiCols > frame.cols) {
             centre_x = 320;
         }
-        CAR_CENTRE_COL = frame.cols/2 - 50 - centre_x;
 
-        Mat srcROI(frame, Rect(centre_x, imageRows - roiRows, roiCols, roiRows));
+        int roi_x = centre_x + last_roi_x - 320;
+        CAR_CENTRE_COL = frame.cols/2 - 50 - roi_x;
+        Mat srcROI(frame, Rect(roi_x, imageRows - roiRows, roiCols, roiRows));
+        last_roi_x = roi_x;
 
         clock_t start = clock();
 

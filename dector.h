@@ -58,6 +58,7 @@ public:
     volatile int decode_value = 0;
     volatile int centre_y = 0;
     volatile int centre_x = 320;
+    int last_roi_x = 320;
     int imageCols = 0;
     int imageRows = 0;
     int roiCols = 640;
