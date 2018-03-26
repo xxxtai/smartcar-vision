@@ -1,14 +1,12 @@
 #include "dector.h"
-//#include <windows.h>
-//#include "stdafx.h"
-//#include "SerialPort.h"
 #include <thread>
-#include "tx2uart.h"
+
 #include <unistd.h>
 #include <mutex>
+#include "serial.h"
 
 Dector dector;
-TX2UART mySerialPort;
+Serial serial;
 mutex sLock;
 float err_last = 0;
 int D_value = 0;
@@ -23,30 +21,12 @@ void PIDControl();
 void setTimer();
 void turnRight(int time);
 int main(int argc, char *argv[]){
-
-    mySerialPort.init_serial();
-
-
-
-//    if (!mySerialPort.InitPort(5, CBR_115200)){
-//        std::cout << "initPort fail !" << std::endl;
-//    }else{
-//        std::cout << "initPort success !" << std::endl;
-//    }
-
-//    if (!mySerialPort.OpenListenThread()){
-//        std::cout << "OpenListenThread fail !" << std::endl;
-//    }else{
-//        std::cout << "OpenListenThread success !" << std::endl;
-//    }
-
-
     lastTime = clock();
     thread th1(MotroCarControl);
     thread th2(setTimer);
 
-//    dector.videoTest("/home/nvidia/Documents/images/1.AVI");//
-    dector.cameraTest();
+    dector.videoTest("/home/nvidia/Documents/images/1.AVI");//
+//    dector.cameraTest();
 
 //    for(int i = 1; i <= 18; i++) {
 //        dector.imageTest("/home/nvidia/Documents/images/" + to_string(i) + ".JPG");
@@ -101,13 +81,15 @@ void turnRight(int time){
     sLock.lock();
     stop = true;
     char buf1[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
-    mySerialPort.WriteData(buf1, 13);
+    QByteArray qb1(QByteArray::fromRawData(buf1, 13));
+    serial.send(qb1);
     cout << "motro car turn!!!!!!" << endl;
 
 //    usleep(1000000);
 
     char buf2[13] = {'&','V','=','+','0','7','5','/','-','0','7','5','&'};
-    mySerialPort.WriteData(buf2, 13);
+    QByteArray qb2(QByteArray::fromRawData(buf2, 13));
+    serial.send(qb2);
     cout << "motro car turn right" << endl;
     sLock.unlock();
 
@@ -115,7 +97,8 @@ void turnRight(int time){
     
     sLock.lock();
     char buf3[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
-    mySerialPort.WriteData(buf3, 13);
+    QByteArray qb3(QByteArray::fromRawData(buf3, 13));
+    serial.send(qb3);
     sLock.unlock();
 //    cout << "motro car stop!!!!!!" << endl;
 //    usleep(1000000);
@@ -159,7 +142,8 @@ void PIDControl(){
 //    cout << endl;
     sLock.lock();
     if(!stop){
-    	mySerialPort.WriteData(buf, 13);
+        QByteArray qb(QByteArray::fromRawData(buf, 13));
+        serial.send(qb);
     }
     sLock.unlock();
 }

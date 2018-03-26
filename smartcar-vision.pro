@@ -11,16 +11,15 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
     dector.cpp \
-    tx2uart.cpp
-#    SerialPort.cpp \
-#    stdafx.cpp
+    posix_qextserialport.cpp \
+    qextserialbase.cpp \
+    serial.cpp
 
 HEADERS += \
     dector.h \
-    tx2uart.h
-#    SerialPort.h \
-#    stdafx.h \
-#    targetver.h
+    posix_qextserialport.h \
+    qextserialbase.h \
+    serial.h
 
 INCLUDEPATH += /usr/include \
 /usr/include/opencv \
