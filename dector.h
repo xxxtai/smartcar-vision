@@ -56,8 +56,10 @@ public:
     volatile double position_err = 0;
     volatile double angle_err = 0;
     volatile int decode_value = 0;
+    int last_decode_value = 0;
     volatile int centre_y = 0;
     volatile int centre_x = 320;
+    volatile bool turned = false;
     int last_roi_x = 320;
     int imageCols = 0;
     int imageRows = 0;

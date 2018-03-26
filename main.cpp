@@ -65,16 +65,20 @@ void MotroCarControl(){
 	}
 	if(readyToTurn) {
 	    if(dector.centre_y > dector.imageRows*2/3){
-                turnRight(700000);
+                turnRight(640000);
+	        readyToTurn = false;
+                dector.decode_value = -1;
             }
             if(dector.centre_y > dector.imageRows/2){
-                turnRight(800000);
+                turnRight(740000);
+	        readyToTurn = false;
+                dector.decode_value = -1;
             }
             if(dector.centre_y > dector.imageRows/3){
-                turnRight(940000);
+                turnRight(880000);
+	        readyToTurn = false;
+                dector.decode_value = -1;
             }
-            dector.decode_value = 0;
-	    readyToTurn = false;
 	}
     }
 }
@@ -95,22 +99,22 @@ void turnRight(int time){
     stop = true;
     char buf1[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
     mySerialPort.WriteData(buf1, 13);
-//    cout << "motro car stop!!!!!!" << endl;
+    cout << "motro car turn!!!!!!" << endl;
 
-    usleep(1000000);
+//    usleep(1000000);
 
     char buf2[13] = {'&','V','=','+','0','7','5','/','-','0','7','5','&'};
     mySerialPort.WriteData(buf2, 13);
 //    cout << "motro car turn right" << endl;
 
-    usleep(1270000);
+    usleep(1300000);
 
     char buf3[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
     mySerialPort.WriteData(buf3, 13);
 //    cout << "motro car stop!!!!!!" << endl;
-    usleep(1000000);
+//    usleep(1000000);
     stop = false;
-
+    dector.turned = true;
 }
 
 void PIDControl(){

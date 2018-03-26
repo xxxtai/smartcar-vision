@@ -27,12 +27,12 @@ Dector::Dector() {
         TWOTIMES_WHITE_LINE_WIDTH_MAX = 8;
         ONE_TIME_THRESHOLD = 4;
         MEAN_CENTRE_GAP = 35;
-        EDGE_CENTRE_ROW_GAP_1 = 8;
-        EDGE_CENTRE_COL_GAP_1 = 14;
-        EDGE_CENTRE_ROW_GAP_2 = 16;
-        EDGE_CENTRE_COL_GAP_2 = 27;
-        EDGE_CENTRE_ROW_GAP_3 = 20;
-        EDGE_CENTRE_COL_GAP_3 = 40;
+        EDGE_CENTRE_ROW_GAP_1 = 12;
+        EDGE_CENTRE_COL_GAP_1 = 24;
+        EDGE_CENTRE_ROW_GAP_2 = 19;
+        EDGE_CENTRE_COL_GAP_2 = 35;
+        EDGE_CENTRE_ROW_GAP_3 = 22;
+        EDGE_CENTRE_COL_GAP_3 = 45;
         KERNELS_COUNT = 2;
         MARKS_GAP = 180;
         SAME_LINE_ANGLE = 20;
@@ -88,13 +88,21 @@ void Dector::mediaStream(VideoCapture capture, int delay){
         capture >> frame;//读出每一帧的图像
         if (frame.empty()) break;
 
-        if(centre_x + roiCols > frame.cols) {
-            centre_x = 320;
-        }
-
         int roi_x = centre_x + last_roi_x - 320;
+	if(!turned) {    
+            int roi_x = centre_x + last_roi_x - 320;
+	} else {
+	    roi_x = 320;
+	    turned = false;
+	}
+        if(roi_x + roiCols > frame.cols) {
+            roi_x = 320;
+        }
+        if(roi_x < 0) {
+            roi_x = 0;
+        }
         CAR_CENTRE_COL = frame.cols/2 - 50 - roi_x;
-        Mat srcROI(frame, Rect(roi_x, imageRows - roiRows, roiCols, roiRows));
+        Mat srcROI(frame, Rect(roi_x, frame.rows - roiRows, roiCols, roiRows));
         last_roi_x = roi_x;
 
         clock_t start = clock();
@@ -117,6 +125,8 @@ void Dector::mediaStream(VideoCapture capture, int delay){
             moveWindow("after", 900, 0);
             imshow("before", srcROI);
             moveWindow("before", 0, 0);
+            imshow("before1", frame);
+            moveWindow("before1", 700, 0);
         }
 
         if(delay != 0){
@@ -189,7 +199,14 @@ void Dector::imageProcess(Mat& frame, Mat& thresholded){
 
         clock_t start4 = clock();
         vector<Point> encodePoints;
-        decode_value = decodeImage(thresholded, points, encodePoints);
+        int value = decodeImage(thresholded, points, encodePoints);
+        if(value != 0 && centre_y > imageRows/6) {
+	    last_decode_value = decode_value;
+	    decode_value = value;
+	}
+	if(decode_value != last_decode_value){
+	    cout << "decode_value:" << decode_value << endl;
+	}	
 
         if(debug) {
             myPutText(to_string(decode_value), frame, 100, 300);
