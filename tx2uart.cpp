@@ -84,7 +84,7 @@ int TX2UART::uart_recv(int fd, char *data, int datalen)
     ret = select(fd+1, &fs_read, NULL, NULL, tv_timeout);
 #endif
 
-// printf("ret = %d\n", ret);
+ printf("ret = %d\n", ret);
     //如果返回0，代表在描述符状态改变前已超过timeout时间,错误返回-1
 
     if (FD_ISSET(fd, &fs_read)) {

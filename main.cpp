@@ -5,15 +5,17 @@
 #include <thread>
 #include "tx2uart.h"
 #include <unistd.h>
+#include <mutex>
 
 Dector dector;
 TX2UART mySerialPort;
+mutex sLock;
 float err_last = 0;
 int D_value = 0;
 float integral = 0;
 float Kp = 0.12,Ki = 0,Kd = 0.0;
 unsigned char speed = 150;
-bool stop = false;
+volatile bool stop = false;
 bool readyToTurn = false;
 double lastTime = 0;
 void MotroCarControl();
@@ -96,6 +98,7 @@ void setTimer(){
 
 void turnRight(int time){
     usleep(time);
+    sLock.lock();
     stop = true;
     char buf1[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
     mySerialPort.WriteData(buf1, 13);
@@ -105,12 +108,15 @@ void turnRight(int time){
 
     char buf2[13] = {'&','V','=','+','0','7','5','/','-','0','7','5','&'};
     mySerialPort.WriteData(buf2, 13);
-//    cout << "motro car turn right" << endl;
+    cout << "motro car turn right" << endl;
+    sLock.unlock();
 
     usleep(1300000);
-
+    
+    sLock.lock();
     char buf3[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
     mySerialPort.WriteData(buf3, 13);
+    sLock.unlock();
 //    cout << "motro car stop!!!!!!" << endl;
 //    usleep(1000000);
     stop = false;
@@ -118,9 +124,6 @@ void turnRight(int time){
 }
 
 void PIDControl(){
-    if(stop) {
-        return;
-    }
     D_value = (int)(Kp * dector.position_err);
 //    cout << "D_value:" << D_value << endl;
     unsigned char left_value = speed - D_value/2;
@@ -154,5 +157,9 @@ void PIDControl(){
 //        cout << buf[i];
 //    }
 //    cout << endl;
-    mySerialPort.WriteData(buf, 13);
+    sLock.lock();
+    if(!stop){
+    	mySerialPort.WriteData(buf, 13);
+    }
+    sLock.unlock();
 }
