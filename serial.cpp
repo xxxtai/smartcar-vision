@@ -5,7 +5,7 @@ Serial::Serial(){
 
     myCom ->open(QIODevice::ReadWrite);
     //以读写方式打开串口
-    myCom->setBaudRate(BAUD115200);
+    myCom->setBaudRate(BAUD57600);
     //波特率设置，我们设置为9600
     myCom->setDataBits(DATA_8);
    //数据位设置，我们设置为8位数据位

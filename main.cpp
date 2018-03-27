@@ -78,14 +78,13 @@ void setTimer(){
 
 void turnRight(int time){
     usleep(time);
+
     sLock.lock();
     stop = true;
     char buf1[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
     QByteArray qb1(QByteArray::fromRawData(buf1, 13));
     serial.send(qb1);
-    for(int i = 0; i < 10; i++) {
-        serial.send(qb1);
-    }
+    serial.send(qb1);
     cout << "motro car stop to turn!" << endl;
 
 //    usleep(1000000);
@@ -93,9 +92,7 @@ void turnRight(int time){
     char buf2[13] = {'&','V','=','+','0','7','5','/','-','0','7','5','&'};
     QByteArray qb2(QByteArray::fromRawData(buf2, 13));
     serial.send(qb2);
-    for(int i = 0; i < 10; i++){
-        serial.send(qb2);
-    }
+    serial.send(qb2);
     cout << "motro car turning right" << endl;
     sLock.unlock();
 
@@ -105,11 +102,10 @@ void turnRight(int time){
     char buf3[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
     QByteArray qb3(QByteArray::fromRawData(buf3, 13));
     serial.send(qb3);
-    for(int i = 0; i < 10; i++){
-        serial.send(qb3);
-    }
-    sLock.unlock();
+    serial.send(qb3);
     cout << "motro car finished turning stop!!!" << endl;
+    sLock.unlock();
+
 //    usleep(1000000);
     stop = false;
     dector.turned = true;
