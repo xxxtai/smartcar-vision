@@ -1,5 +1,6 @@
 QT += core
 QT -= gui
+QT += network
 
 TARGET = smartcar-vision
 CONFIG += console
@@ -13,13 +14,15 @@ SOURCES += main.cpp \
     dector.cpp \
     posix_qextserialport.cpp \
     qextserialbase.cpp \
-    serial.cpp
+    serial.cpp \
+    socketclient.cpp
 
 HEADERS += \
     dector.h \
     posix_qextserialport.h \
     qextserialbase.h \
-    serial.h
+    serial.h \
+    socketclient.h
 
 INCLUDEPATH += /usr/include \
 /usr/include/opencv \

@@ -8,6 +8,12 @@
 #include <iostream>
 #include <algorithm>
 #include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 using namespace cv;
 using namespace std;
@@ -50,7 +56,7 @@ private:
         int col;
         int type;//1：定位标识；２：导航标识
     };
-
+    int clnt_sock;
 
 public:
     volatile double position_err = 0;
@@ -66,8 +72,8 @@ public:
     int roiCols = 640;
     int roiRows = 640;
     Dector();
-    void cameraTest();
-    void videoTest(string);
+    void cameraTest(int clnt);
+    void videoTest(string, int clnt);
     void mediaStream(VideoCapture capture, int delay);
     void imageTest(string);
     void imageProcess(Mat &frame, Mat &thresholded);

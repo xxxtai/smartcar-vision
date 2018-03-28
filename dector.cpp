@@ -51,7 +51,8 @@ Dector::Dector() {
     }
 }
 
-void Dector::cameraTest(){
+void Dector::cameraTest(int clnt){
+    clnt_sock = clnt;
     VideoCapture capture(1);
     capture.set(CV_CAP_PROP_FRAME_WIDTH, imageCols);
     capture.set(CV_CAP_PROP_FRAME_HEIGHT, imageRows);
@@ -65,7 +66,8 @@ void Dector::cameraTest(){
 }
 
 
-void Dector::videoTest(string fileName) {
+void Dector::videoTest(string fileName, int clnt) {
+    clnt_sock = clnt;
     VideoCapture capture;
     capture.open(fileName);
 
@@ -81,6 +83,9 @@ void Dector::videoTest(string fileName) {
 }
 
 void Dector::mediaStream(VideoCapture capture, int delay){
+    const char * initPosition = "c2815e";
+    write(clnt_sock, initPosition, strlen(initPosition));//init position
+
     uchar count = 0;
     double totalTime = 0;
     while (true){
@@ -201,12 +206,14 @@ void Dector::imageProcess(Mat& frame, Mat& thresholded){
         vector<Point> encodePoints;
         int value = decodeImage(thresholded, points, encodePoints);
         if(value != 0 && centre_y > imageRows/6) {
-	    last_decode_value = decode_value;
-	    decode_value = value;
-	}
-	if(decode_value != last_decode_value){
-	    cout << "decode_value:" << decode_value << endl;
-	}	
+            last_decode_value = decode_value;
+            decode_value = value;
+        }
+        if(decode_value != last_decode_value){
+            cout << "decode_value:" << decode_value << endl;
+            const char * data = ("c" + to_string(decode_value) + "e").data();
+            write(clnt_sock, data, strlen(data));
+        }
 
         if(debug) {
             myPutText(to_string(decode_value), frame, 100, 300);
