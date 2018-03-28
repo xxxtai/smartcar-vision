@@ -66,6 +66,11 @@ public:
     volatile int centre_y = 0;
     volatile int centre_x = 320;
     volatile bool turned = false;
+    volatile int routeNodes[30];
+    volatile int command[30];
+    volatile int nodeIndex = 0;
+    volatile int stopNum = 0;
+    volatile bool readyToTurn = false;
     int last_roi_x = 320;
     int imageCols = 0;
     int imageRows = 0;

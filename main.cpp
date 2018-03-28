@@ -9,10 +9,6 @@
 Dector dector;
 Serial serial;
 int clnt_sock;
-int routeNodes[30];
-int command[30];
-int nodeIndex = 0;
-int stopNum = 0;
 mutex sLock;
 float err_last = 0;
 int D_value = 0;
@@ -20,7 +16,6 @@ float integral = 0;
 float Kp = 0.12,Ki = 0,Kd = 0.0;
 unsigned char speed = 150;
 volatile bool stop = false;
-bool readyToTurn = false;
 double lastTime = 0;
 void MotroCarControl();
 void PIDControl();
@@ -28,9 +23,6 @@ void setTimer();
 void readFromExpress();
 void turn(int time, int type);
 int main(int argc, char *argv[]){
-
-
-
     struct sockaddr_in serv_addr;
 
     clnt_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -107,9 +99,9 @@ void readFromExpress(){
                             break;
                         }
                     } else if(data[i] == 'r') {
-                        nodeIndex = 0;
-                        memset(routeNodes, 0, sizeof(routeNodes));
-                        memset(command, 0, sizeof(command));
+                        dector.nodeIndex = 0;
+//                        memset(dector.routeNodes, 0, sizeof(dector.routeNodes));
+//                        memset(dector.command, 0, sizeof(dector.command));
                         int count_l = 0;
                         for(int j = i + 1; j < index; j++) {
                             if(data[j] == 'l' || data[j] == 'e') {
@@ -121,15 +113,15 @@ void readFromExpress(){
                                         }
                                         if(data[j] == 'e') {
                                             cout << "stop:" << value << data[++m] << data[++m];
-                                            stopNum = value;
-                                            routeNodes[nodeIndex] = value;
-                                            command[nodeIndex] = 5;
-                                            nodeIndex++;
+                                            dector.stopNum = value;
+                                            dector.routeNodes[dector.nodeIndex] = value;
+                                            dector.command[dector.nodeIndex] = 5;
+                                            dector.nodeIndex++;
                                         } else if(data[j] == 'l') {
                                             comm = data[m + 2] - 48;
-                                            routeNodes[nodeIndex] = value;
-                                            command[nodeIndex] = comm;
-                                            nodeIndex++;
+                                            dector.routeNodes[dector.nodeIndex] = value;
+                                            dector.command[dector.nodeIndex] = comm;
+                                            dector.nodeIndex++;
                                         }
                                     }
                                 }
@@ -139,10 +131,10 @@ void readFromExpress(){
                                 count_l++;
                             }
                         }
-                        for(int i = 0; i < nodeIndex; i++) {
-                            cout << routeNodes[i] << "//" << command[i] << endl;
+                        for(int i = 0; i < dector.nodeIndex; i++) {
+                            cout << dector.routeNodes[i] << "//" << dector.command[i] << endl;
                         }
-                        nodeIndex = 0;
+                        dector.nodeIndex = 0;
                         break;
                     }
                 }
@@ -159,34 +151,21 @@ void readFromExpress(){
 void MotroCarControl(){
     sleep(1);
     while(true){
-        int value = dector.decode_value;
-        if(value != 0 && value == routeNodes[nodeIndex]) {
-            readyToTurn = true;
-        }
-        if(value != 0 && value == stopNum) {
-	    readyToTurn = true;
-        }
-//    if(value == 544 || value == 2810 || value == 2570 || value == 2815) {
-//            readyToTurn = true;
-//	}
-        if(readyToTurn) {
+        if(dector.readyToTurn) {
             if(dector.centre_y > dector.imageRows*2/3){
-                turn(640000, command[nodeIndex]);
-                nodeIndex++;
-                readyToTurn = false;
-                dector.decode_value = -1;
+                turn(640000, dector.command[dector.nodeIndex]);
+                dector.nodeIndex++;
+                dector.readyToTurn = false;
             }
             if(dector.centre_y > dector.imageRows/2){
-                turn(740000, command[nodeIndex]);
-                nodeIndex++;
-                readyToTurn = false;
-                dector.decode_value = -1;
+                turn(740000, dector.command[dector.nodeIndex]);
+                dector.nodeIndex++;
+                dector.readyToTurn = false;
             }
             if(dector.centre_y > dector.imageRows/3){
-                turn(880000, command[nodeIndex]);
-                nodeIndex++;
-                readyToTurn = false;
-                dector.decode_value = -1;
+                turn(880000, dector.command[dector.nodeIndex]);
+                dector.nodeIndex++;
+                dector.readyToTurn = false;
             }
         }
     }
@@ -220,7 +199,7 @@ void turn(int time, int type){//4:turnRight 3:turnLeft 1:farword 5:stop
         sLock.unlock();    
         char * stateMsg = "s2e";
         write(clnt_sock, stateMsg, strlen(stateMsg));
-	cout << "destination!!!" << endl;
+	cout << "arrive in destination!!!" << endl;
 	return;
     }
     cout << "motro car stop to turn!" << endl;
@@ -231,15 +210,16 @@ void turn(int time, int type){//4:turnRight 3:turnLeft 1:farword 5:stop
     if(type == 4) {
         buf2[3] = '+';
         buf2[8] = '-';
+        cout << "car turning right" << endl;
     } else if (type == 3) {
         buf2[3] = '-';
         buf2[8] = '+';
+        cout << "car turning left" << endl;
     }
 
     QByteArray qb2(QByteArray::fromRawData(buf2, 13));
     serial.send(qb2);
     serial.send(qb2);
-    cout << "motro car turning right" << endl;
     sLock.unlock();
 
     usleep(1300000);
@@ -249,7 +229,7 @@ void turn(int time, int type){//4:turnRight 3:turnLeft 1:farword 5:stop
     QByteArray qb3(QByteArray::fromRawData(buf3, 13));
     serial.send(qb3);
     serial.send(qb3);
-    cout << "motro car finished turning stop!!!" << endl;
+    cout << "car finished turning, now going" << endl;
     sLock.unlock();
 
 //    usleep(1000000);
@@ -286,11 +266,6 @@ void PIDControl(){
     buf[10] = 48 + (right_value - (buf[9] - 48)*100)/10;
     buf[11] = 48 + (right_value - (buf[9] - 48)*100 - (buf[10] - 48)*10);
 
-//    cout << "                     msg:";
-//    for(int i = 0; i < 13; i++) {
-//        cout << buf[i];
-//    }
-//    cout << endl;
     sLock.lock();
     if(!stop){
         QByteArray qb(QByteArray::fromRawData(buf, 13));

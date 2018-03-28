@@ -210,6 +210,18 @@ void Dector::imageProcess(Mat& frame, Mat& thresholded){
             decode_value = value;
         }
         if(decode_value != last_decode_value){
+            if(decode_value == 544) {
+                cout << "decode 544 : routeNOde = " << routeNodes[nodeIndex] << endl;
+            }
+	    if(decode_value == 2570) {
+	    	cout << "decode 2570 ::: routeNOde = " << routeNodes[nodeIndex] << endl;
+	    }
+
+            if(decode_value != 0 && (decode_value == routeNodes[nodeIndex] || decode_value == stopNum)) {
+                readyToTurn = true;
+                cout << "decode_value:" << decode_value << " ready to turn!" << endl;
+            }
+
             cout << "decode_value:" << decode_value << endl;
             const char * data = ("c" + to_string(decode_value) + "e").data();
             write(clnt_sock, data, strlen(data));
