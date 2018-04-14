@@ -33,7 +33,7 @@ int main(int argc, char *argv[]){
 
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = inet_addr("192.168.1.103");
+    serv_addr.sin_addr.s_addr = inet_addr("192.168.1.105");
     serv_addr.sin_port = htons(8899);
 
     if (connect(clnt_sock,
@@ -80,13 +80,9 @@ void readFromExpress(){
                 for(int i = 0; i < index; i++) {
                     if(data[i] == 'm') {
                         if(data[i + 1] == '0' && data[i + 2] == '2') {
+			    dector.commandStop = true;
+			    dector.stopDecode = true;
                             cout << "comm:stop" << endl;
-                            sLock.lock();
-                            stop = true;
-                            char buf1[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
-                            QByteArray qb1(QByteArray::fromRawData(buf1, 13));
-                            serial.send(qb1);
-                            sLock.unlock();
                             char * stateMsg = "s2e";
                             write(clnt_sock, stateMsg, strlen(stateMsg));
                             break;
@@ -94,14 +90,13 @@ void readFromExpress(){
                         if(data[i + 1] == '0' && data[i + 2] == '1') {
                             cout << "comm:farword" << endl;
                             stop = false;
+			    dector.stopDecode = false;
                             char * stateMsg = "s1e";
                             write(clnt_sock, stateMsg, strlen(stateMsg));
                             break;
                         }
                     } else if(data[i] == 'r') {
                         dector.nodeIndex = 0;
-//                        memset(dector.routeNodes, 0, sizeof(dector.routeNodes));
-//                        memset(dector.command, 0, sizeof(dector.command));
                         int count_l = 0;
                         for(int j = i + 1; j < index; j++) {
                             if(data[j] == 'l' || data[j] == 'e') {
@@ -135,6 +130,7 @@ void readFromExpress(){
                             cout << dector.routeNodes[i] << "//" << dector.command[i] << endl;
                         }
                         dector.nodeIndex = 0;
+			dector.decode_value = 0;
                         break;
                     }
                 }
@@ -156,18 +152,28 @@ void MotroCarControl(){
                 turn(640000, dector.command[dector.nodeIndex]);
                 dector.nodeIndex++;
                 dector.readyToTurn = false;
-            }
-            if(dector.centre_y > dector.imageRows/2){
+            } else if(dector.centre_y > dector.imageRows/2){
                 turn(740000, dector.command[dector.nodeIndex]);
                 dector.nodeIndex++;
                 dector.readyToTurn = false;
-            }
-            if(dector.centre_y > dector.imageRows/3){
+            } else if(dector.centre_y > dector.imageRows/3){
                 turn(880000, dector.command[dector.nodeIndex]);
                 dector.nodeIndex++;
                 dector.readyToTurn = false;
             }
         }
+        if(dector.commandStop) {
+	    if(dector.centre_y > dector.imageRows*2/3){
+		turn(640000, 5);
+		dector.commandStop = false;
+	    } else if(dector.centre_y > dector.imageRows/2){
+		turn(740000, 5);
+		dector.commandStop = false;
+	    } else if(dector.centre_y > dector.imageRows/3){
+		turn(880000, 5);
+		dector.commandStop = false;
+	    }
+	}
     }
 }
 
@@ -175,7 +181,7 @@ void setTimer(){
     sleep(1);
     while(true){
         double cur_time = clock();
-        if(cur_time - lastTime >= (CLOCKS_PER_SEC/10)) {
+        if(cur_time - lastTime >= (6*CLOCKS_PER_SEC/100)) {
             lastTime = cur_time;
             PIDControl();
         }
@@ -191,7 +197,7 @@ void turn(int time, int type){//4:turnRight 3:turnLeft 1:farword 5:stop
 
     sLock.lock();
     stop = true;
-    char buf1[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
+    char buf1[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','#'};
     QByteArray qb1(QByteArray::fromRawData(buf1, 13));
     serial.send(qb1);
     serial.send(qb1);
@@ -199,14 +205,20 @@ void turn(int time, int type){//4:turnRight 3:turnLeft 1:farword 5:stop
         sLock.unlock();    
         char * stateMsg = "s2e";
         write(clnt_sock, stateMsg, strlen(stateMsg));
-	cout << "arrive in destination!!!" << endl;
+//	cout << "arrive in destination!!!" << endl;
+	if(dector.nodeIndex > 0 && dector.decode_value != 132 && dector.decode_value != 512 && dector.decode_value == dector.stopNum){
+	    cout << "motor car unload !!!" << endl;
+    	    char buf_unload[13] = {'&','V','=','u','0','0','0','/','u','0','0','0','#'};
+    	    QByteArray qb_unload(QByteArray::fromRawData(buf_unload, 13));
+    	    serial.send(qb_unload);
+	}
 	return;
     }
     cout << "motro car stop to turn!" << endl;
 
 //    usleep(1000000);
 
-    char buf2[13] = {'&','V','=','+','0','7','5','/','-','0','7','5','&'};
+    char buf2[13] = {'&','V','=','+','0','7','5','/','-','0','7','5','#'};
     if(type == 4) {
         buf2[3] = '+';
         buf2[8] = '-';
@@ -225,7 +237,7 @@ void turn(int time, int type){//4:turnRight 3:turnLeft 1:farword 5:stop
     usleep(1300000);
     
     sLock.lock();
-    char buf3[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
+    char buf3[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','#'};
     QByteArray qb3(QByteArray::fromRawData(buf3, 13));
     serial.send(qb3);
     serial.send(qb3);
@@ -256,9 +268,9 @@ void PIDControl(){
         right_value_str = to_string(right_value);
     }
 
-    string msg = "&V=" + left_value_str + "/" + right_value_str + "&";
+    string msg = "&V=" + left_value_str + "/" + right_value_str + "#";
 
-    char buf[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','&'};
+    char buf[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','#'};
     buf[4] = 48 + left_value/100;
     buf[5] = 48 + (left_value - (buf[4] - 48)*100)/10;
     buf[6] = 48 + (left_value - (buf[4] - 48)*100 - (buf[5] - 48)*10);

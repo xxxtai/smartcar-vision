@@ -71,6 +71,8 @@ public:
     volatile int nodeIndex = 0;
     volatile int stopNum = 0;
     volatile bool readyToTurn = false;
+    volatile bool stopDecode = false;
+    volatile bool commandStop = false;
     int last_roi_x = 320;
     int imageCols = 0;
     int imageRows = 0;
@@ -82,7 +84,6 @@ public:
     void mediaStream(VideoCapture capture, int delay);
     void imageTest(string);
     void imageProcess(Mat &frame, Mat &thresholded);
-    void perspective(Mat&);
     vector<Point> scanImageEfficiet(Mat&);
     void analyseLines(vector<Line>&lines, vector<Kernel>&, uchar*);
     vector<Point> analyseKernels(vector<Kernel> &);
@@ -95,14 +96,11 @@ public:
     vector<int> calculateEdges(vector<Point>&);
     int decodeImage(Mat&, vector<Point> &, vector<Point>&);
     Direction calculDirection(int, int, int, int , vector<int> edges);
-    int decodeArea(vector<Point> encodePoints, Point &p1, Point &p2, Point &p5, Direction);
     void errorMeasure(vector<Point>&, Mat&);
-    double calculateAngle(Point&, Point&, Point&);
-    void removeRepeat(vector<Point> &, vector<Point> &, int, int);
-    int judgePosition(Point&, Point&, Point&, Direction);
-    Direction rotateDirection(Direction, Direction);
-    void setP1P2(Direction, Point&, Point&, vector<Point>&);
+    void removeRepeat(vector<Point> &, int, int);
     void myPutText(string text, Mat src, int x, int y);
+    int decode(vector<Point> &pt_local,vector<Point> &pt_encode);
+    CvPoint transformPoint(const CvPoint pointToTransform, const Mat matrix);
 };
 
 #endif // DECTOR_H

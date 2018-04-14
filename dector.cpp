@@ -83,7 +83,7 @@ void Dector::videoTest(string fileName, int clnt) {
 }
 
 void Dector::mediaStream(VideoCapture capture, int delay){
-    const char * initPosition = "c2815e";
+    const char * initPosition = "c1791e";
     write(clnt_sock, initPosition, strlen(initPosition));//init position
 
     uchar count = 0;
@@ -205,24 +205,22 @@ void Dector::imageProcess(Mat& frame, Mat& thresholded){
         clock_t start4 = clock();
         vector<Point> encodePoints;
         int value = decodeImage(thresholded, points, encodePoints);
-        if(value != 0 && centre_y > imageRows/6) {
+        if(!stopDecode && value != 0 && centre_y > imageRows/6) {
             last_decode_value = decode_value;
             decode_value = value;
         }
-        if(decode_value != last_decode_value){
-            if(decode_value == 544) {
-                cout << "decode 544 : routeNOde = " << routeNodes[nodeIndex] << endl;
-            }
-	    if(decode_value == 2570) {
-	    	cout << "decode 2570 ::: routeNOde = " << routeNodes[nodeIndex] << endl;
-	    }
-
-            if(decode_value != 0 && (decode_value == routeNodes[nodeIndex] || decode_value == stopNum)) {
+        if(!stopDecode && decode_value != 0 && decode_value != last_decode_value){
+            if(decode_value == routeNodes[nodeIndex] || decode_value == stopNum) {
                 readyToTurn = true;
+		if(decode_value == stopNum){
+		    stopDecode = true;
+		}
                 cout << "decode_value:" << decode_value << " ready to turn!" << endl;
+            } else {
+                cout << "decode_value:" << decode_value << endl;
             }
 
-            cout << "decode_value:" << decode_value << endl;
+
             const char * data = ("c" + to_string(decode_value) + "e").data();
             write(clnt_sock, data, strlen(data));
         }
@@ -349,10 +347,6 @@ int Dector::decodeImage(Mat& thresholded, vector<Point>& kernelPoints, vector<Po
     Canny( thresholdedROI, cannyMat, g_nThresh, g_nThresh*2, 3 );
     findContours( cannyMat, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
-    vector<Point> bottom_left, bottom_right, top_right;
-    Direction bottom_left_relative_dir, bottom_right_relative_dir, top_right_relative_dir;
-    Point bottom_left_p1, bottom_left_p2, bottom_right_p1, bottom_right_p2, top_right_p1, top_right_p2;
-    Direction locateDir = calculDirection(kernelPoints[0].x, kernelPoints[0].y, centreCol, centreRow, edges);
     for( int i = 0; i < (int)contours.size(); i++ ) {
         Rect rect = boundingRect(contours.at(i));
         int x = rect.x + rect.width/2 + cols;
@@ -363,35 +357,11 @@ int Dector::decodeImage(Mat& thresholded, vector<Point>& kernelPoints, vector<Po
             if(relative_dir == NO) {
                 continue;
             }
-
-            Direction realDir = rotateDirection(locateDir, relative_dir);
-            if(realDir == BOTTOM_LEFT) {
-                bottom_left_relative_dir = relative_dir;
-                removeRepeat(bottom_left, encodePoints, x, y);
-                setP1P2(relative_dir, bottom_left_p1, bottom_left_p2, kernelPoints);
-            } else if(realDir == BOTTOM_RIGHT) {
-                bottom_right_relative_dir = relative_dir;
-                removeRepeat(bottom_right, encodePoints, x, y);
-                setP1P2(relative_dir, bottom_right_p1, bottom_right_p2, kernelPoints);
-            }else if (realDir == TOP_RIGHT) {
-                top_right_relative_dir = relative_dir;
-                removeRepeat(top_right, encodePoints, x, y);
-                setP1P2(relative_dir, top_right_p1, top_right_p2, kernelPoints);
-            }
+            removeRepeat(encodePoints, x, y);
         }
     }
 
-    int bottom_left_value = decodeArea(bottom_left, bottom_left_p1, bottom_left_p2, kernelPoints[5], bottom_left_relative_dir);
-
-    int bottom_right_value = decodeArea(bottom_right, bottom_right_p1, bottom_right_p2, kernelPoints[5], bottom_right_relative_dir);
-
-    int top_right_value = decodeArea(top_right, top_right_p1, top_right_p2, kernelPoints[5], top_right_relative_dir);
-
-    if(bottom_left_value > 15 || bottom_right_value > 15 || bottom_right_value > 15) {
-        return 0;//error
-    }
-
-    result = (top_right_value << 8) + (bottom_right_value << 4) + bottom_left_value;
+      result = decode(kernelPoints, encodePoints);
 
     //画轮廓及其质心并显示
 //    Mat drawing = Mat::zeros( cannyMat.size(), CV_8UC3 );
@@ -405,123 +375,6 @@ int Dector::decodeImage(Mat& thresholded, vector<Point>& kernelPoints, vector<Po
 
     return result;
 }
-
-int Dector::decodeArea(vector<Point> encodePoints, Point& p1, Point& p2, Point& p5, Direction relative_dir) {
-    int result = 0;
-    int count = encodePoints.size();
-    if(count == 4) {
-        return 15;
-    } else if(count == 0) {
-        return 0;
-    } else if(count > 4) {//error
-        return 16;
-    }
-    int tmpValues[4] = {0, 0, 0, 0};
-    int index = 0;
-    for(vector<Point>::iterator it = encodePoints.begin(); it != encodePoints.end(); it++) {
-        int tmp = judgePosition(*it, p1, p2, relative_dir);
-        tmpValues[index] = tmp;
-        index++;
-        result += tmp;
-    }
-
-    if((result == 2 && count == 1) || (result == 13 && count == 3)) {
-        return result;
-    }
-
-    if(result & 2 == 2 && count == 2) {
-        int value_2_index = 0;
-        int value_8_index = 0;
-        for(int i = 0; i < 4; i++) {
-            if(tmpValues[i] != 0) {
-                if(tmpValues[i] == 2) {
-                    value_2_index = i;
-                } else {
-                    value_8_index = i;
-                }
-            }
-        }
-        double angle = calculateAngle(p5, encodePoints[value_8_index], encodePoints[value_2_index]);
-        if(abs(180 - angle) <= SAME_LINE_ANGLE) {
-            result = 10;
-        }
-    }
-    return result;
-}
-
-int Dector::judgePosition( Point & p,Point & p1, Point & p2, Direction relative_dir) {
-    int same_line_gap = 0;
-    if(p.y < imageRows/2) {
-        same_line_gap = SAME_LINE_GAP_1;
-    } else {
-        same_line_gap = SAME_LINE_GAP_2;
-    }
-    int result = 0;
-    double angle = calculateAngle(p1, p2, p);
-    if(abs(180 - angle) <= SAME_LINE_ANGLE) {
-        result = 2;
-    } else {
-        if((abs(p.x - p1.x) <= same_line_gap && abs(p.y - p2.y) <= same_line_gap)
-                || (abs(p.x - p2.x) <= same_line_gap && abs(p.y - p1.y) <= same_line_gap)){
-            result = 8;
-        } else {
-            if(relative_dir == TOP_RIGHT || relative_dir == BOTTOM_LEFT) {
-                if(abs(p.y - p2.y) <= same_line_gap || abs(p.y - p1.y) <= same_line_gap){
-                    result = 4;
-                } else if(abs(p.x - p1.x) <= same_line_gap || abs(p.x - p2.x) <= same_line_gap) {
-                    result = 1;
-                }
-            }
-            if(relative_dir == BOTTOM_RIGHT || relative_dir == TOP_LEFT) {
-                if(abs(p.y - p2.y) <= same_line_gap || abs(p.y - p1.y) <= same_line_gap){
-                    result = 1;
-                } else if(abs(p.x - p1.x) <= same_line_gap || abs(p.x - p2.x) <= same_line_gap) {
-                    result = 4;
-                }
-            }
-        }
-    }
-    return result;
-}
-
-double Dector::calculateAngle(Point & p1, Point & p2, Point & p3){
-    int x1 = p1.x - p3.x;
-    int y1 = p1.y - p3.y;
-    int x2 = p2.x - p3.x;
-    int y2 = p2.y - p3.y;
-    double value = (x1 * x2 + y1 * y2)
-            /sqrt((pow(x1, 2) + pow(y1,2))*(pow(x2, 2) + pow(y2, 2)));
-    return acos(value)*180/M_PI;
-}
-
-void Dector::perspective(Mat& src) {
-    vector<Point> not_a_rect_shape;
-    not_a_rect_shape.push_back(Point(0,0));
-    not_a_rect_shape.push_back(Point(src.cols-1,0));
-    not_a_rect_shape.push_back(Point(0,src.rows-1));
-    not_a_rect_shape.push_back(Point(src.cols-1, src.rows-1));
-
-    //topLeft, topRight, bottomRight, bottomLeft
-    Point2f src_vertices[4];
-    src_vertices[0] = not_a_rect_shape[0];
-    src_vertices[1] = not_a_rect_shape[1];
-    src_vertices[2] = not_a_rect_shape[2];
-    src_vertices[3] = not_a_rect_shape[3];
-
-    Point2f dst_vertices[4];
-    dst_vertices[0] = Point(src.cols*0.1, src.rows*0);
-    dst_vertices[1] = Point(src.cols*0.9,0);
-    dst_vertices[2] = Point(src.cols*0.26,src.rows);
-    dst_vertices[3] = Point(src.cols*0.66,src.rows);
-
-
-    Mat warpMatrix = getPerspectiveTransform(src_vertices, dst_vertices);
-    Mat rotated;
-    warpPerspective(src, rotated, warpMatrix, rotated.size(), INTER_LINEAR, BORDER_CONSTANT);
-
-    src = rotated;
-}
-
 
 vector<Point> Dector::scanImageEfficiet(Mat & image) {
     vector<Point> points;
@@ -1040,31 +893,9 @@ Dector::Direction Dector::calculDirection(int x, int y, int centreCol, int centr
     }
 }
 
-Dector::Direction Dector::rotateDirection(Direction locateDir, Direction direction) {
-    Direction realDir;
-    if(locateDir == TOP_LEFT) {
-        realDir = direction;
-    } else {
-        int value = direction + (TOP_LEFT - locateDir);
-        if(value > 3) {
-            value -= 4;
-        }
-        if( value == 0) {
-            realDir = BOTTOM_LEFT;
-        } else if(value == 1) {
-            realDir = BOTTOM_RIGHT;
-        } else if(value == 2) {
-            realDir = TOP_RIGHT;
-        } else if(value == 3) {
-            realDir = TOP_LEFT;
-        }
-    }
-    return realDir;
-}
-
-void Dector::removeRepeat(vector<Point> & encodes, vector<Point> & encodePoints, int x, int y){
+void Dector::removeRepeat(vector<Point> & encodePoints, int x, int y){
     bool repeat = false;
-    for(vector<Point>::iterator it = encodes.begin(); it != encodes.end(); ++it) {
+    for(vector<Point>::iterator it = encodePoints.begin(); it != encodePoints.end(); ++it) {
         if((abs(x - it->x) + abs(y - it->y)) < 8) {
             repeat = true;
             break;
@@ -1072,25 +903,9 @@ void Dector::removeRepeat(vector<Point> & encodes, vector<Point> & encodePoints,
     }
     if(!repeat){
         encodePoints.push_back(Point{x, y});
-        encodes.push_back(Point{x, y});
     }
 }
 
-void Dector::setP1P2(Direction direction, Point& P1, Point& P2, vector<Point> &kernelPoints) {
-    if(direction == BOTTOM_LEFT) {
-        P1 = kernelPoints[1];
-        P2 = kernelPoints[4];
-    } else if(direction == BOTTOM_RIGHT) {
-        P1 = kernelPoints[2];
-        P2 = kernelPoints[4];
-    } else if(direction == TOP_LEFT) {
-        P1 = kernelPoints[1];
-        P2 = kernelPoints[3];
-    } else if(direction == TOP_RIGHT){
-        P1 = kernelPoints[2];
-        P2 = kernelPoints[3];
-    }
-}
  void Dector::myPutText(string text, Mat src, int x, int y){
      int font_face = cv::FONT_HERSHEY_COMPLEX;
      double font_scale = 1;
@@ -1099,4 +914,119 @@ void Dector::setP1P2(Direction direction, Point& P1, Point& P2, vector<Point> &k
      origin.x = x;
      origin.y = y;
      putText(src, text, origin, font_face, font_scale, cv::Scalar(0, 255, 255), thickness, 3, 0);
+ }
+
+ CvPoint Dector::transformPoint(const CvPoint pointToTransform, const Mat matrix)
+ {
+     double coordinates[3] = {pointToTransform.x, pointToTransform.y, 1};
+
+     Mat originVector = Mat(3, 1, CV_64F, coordinates);
+     Mat transformedVector = Mat(3, 1, CV_64F, coordinates);
+     transformedVector = matrix*originVector;
+     CvPoint outputPoint = cvPoint((int)(transformedVector.at<double>(0,0) / transformedVector.at<double>(2,0)), (int)(transformedVector.at<double>(1,0) / transformedVector.at<double>(2,0)));
+     return outputPoint;
+ }
+
+ int Dector::decode(vector<Point> &pts_local, vector<Point> &pts_encode){
+
+     vector<Point2f> pts_src;             //拍摄图像中导航点的坐标
+     pts_src.push_back(pts_local[1]);
+     pts_src.push_back(pts_local[2]);
+     pts_src.push_back(pts_local[3]);
+     pts_src.push_back(pts_local[4]);
+
+     vector<Point2f> pts_dst;              //校正后图像中导航点的坐标
+     pts_dst.push_back(Point2f(30, 195));
+     pts_dst.push_back(Point2f(360, 195));
+     pts_dst.push_back(Point2f(195, 30));
+     pts_dst.push_back(Point2f(195, 360));
+
+     Mat h = findHomography(pts_src, pts_dst);  //找出单应性矩阵
+
+     CvPoint pt_position = transformPoint(pts_local[0],h);  //计算校正后的定位坐标
+     if(debug){cout<<"pt_position:"<<pt_position.x<<" "<<pt_position.y<<endl;}
+
+     double angle_rotate = 0;
+     if(pt_position.x<195){
+         if(pt_position.y>195){
+             angle_rotate = -90;
+         }
+     }else{
+         if(pt_position.y<195){
+             angle_rotate = 90;
+         }else{
+             angle_rotate = 180;
+         }
+     }
+     if(debug){cout<<"angle_rotate = "<<angle_rotate<<endl;}
+
+
+     Point2f anchor_pt = Point2f(195,195);
+     Point2f temp;
+     Mat rot_mat = getRotationMatrix2D(anchor_pt, angle_rotate, 1.0);  //通过校正后的定位坐标位置确定旋转角度
+     temp.x = pt_position.x*rot_mat.at<double>(0,0)+pt_position.y*rot_mat.at<double>(0,1)+rot_mat.at<double>(0,2);
+     temp.y = pt_position.x*rot_mat.at<double>(1,0)+pt_position.y*rot_mat.at<double>(1,1)+rot_mat.at<double>(1,2);
+     if(debug){cout<<"totated pt_position:"<<temp.x<<" "<<temp.y<<endl;}
+
+     Point2f pts_temp;
+     Point2f pts_judge_temp;
+     int width_judge = 78;
+     int x_code = 0;
+     int y_code = 0;
+     int code[5][5] ={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+     for(int i=0;i<pts_encode.size();i++){
+         if(debug){cout<<"pts_encode["<<i<<"]: "<<pts_encode[i].x<<" "<<pts_encode[i].y<<endl;}
+         pts_temp = transformPoint(pts_encode[i],h);
+         if(debug){cout<<"pts_temp["<<i<<"]: "<<pts_temp.x<<" "<<pts_temp.y<<endl;}
+
+         pts_judge_temp.x = pts_temp.x*rot_mat.at<double>(0,0)+pts_temp.y*rot_mat.at<double>(0,1)+rot_mat.at<double>(0,2);
+         pts_judge_temp.y = pts_temp.x*rot_mat.at<double>(1,0)+pts_temp.y*rot_mat.at<double>(1,1)+rot_mat.at<double>(1,2);
+         if(debug){ cout<<"rotated pts_encode["<<i<<"]: "<<pts_judge_temp.x<<" "<<pts_judge_temp.y<<endl;}
+
+         if(width_judge != 0){
+             x_code = (int)(pts_judge_temp.y / width_judge);
+             if(debug){cout<<"x_code: "<<x_code<<endl;}
+             y_code = (int)(pts_judge_temp.x / width_judge);
+             if(debug){cout<<"y_code: "<<y_code<<endl;}
+             if(x_code < 5 && y_code <5)
+             {
+                 code[x_code][y_code] = 1;
+             }else{
+                 return 0;
+             }
+
+         }
+
+     }
+     if(debug)
+     {    cout<<" run"<<endl;}
+
+
+     int decode_resault = 0;
+     int reslut_part1 = 0;
+     int reslut_part2 = 0;
+     int reslut_part3 = 0;
+     for(int i=0;i<2;i++){
+         for(int j=3;j<5;j++){
+            reslut_part1 = reslut_part1*2+ code[i][j];
+         }
+     }
+     if(debug){cout<<"reslut_part1 "<<reslut_part1<<endl;}
+     for(int i=3;i<5;i++){
+         for(int j=3;j<5;j++){
+            reslut_part2 = reslut_part2*2+ code[i][j];
+         }
+
+         for(int j=0;j<2;j++){
+            reslut_part3 = reslut_part3*2+ code[i][j];
+         }
+
+     }
+     decode_resault = reslut_part1 * 256 + reslut_part2 * 16 + reslut_part3;
+
+    if(debug){ cout<<"reslut_part2 "<<reslut_part2<<endl;
+    cout<<"reslut_part3 "<<reslut_part3<<endl;
+     cout<<"decode_result"<<decode_resault<<endl;}
+
+     return decode_resault;
  }
