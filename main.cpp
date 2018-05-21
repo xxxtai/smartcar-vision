@@ -12,9 +12,13 @@ int clnt_sock;
 mutex sLock;
 float err_last = 0;
 int D_value = 0;
+int MAX_D_VALUE = 40;
+bool finishedTurn = false;
+double last_position_err = 0;
+int pid_count;
 float integral = 0;
 float Kp = 0.12,Ki = 0,Kd = 0.0;
-unsigned char speed = 150;
+int speed = 20;
 volatile bool stop = false;
 double lastTime = 0;
 void MotroCarControl();
@@ -23,30 +27,30 @@ void setTimer();
 void readFromExpress();
 void turn(int time, int type);
 int main(int argc, char *argv[]){
-    struct sockaddr_in serv_addr;
+//    struct sockaddr_in serv_addr;
 
-    clnt_sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (clnt_sock < 0) {
-        printf("sock() error\n");
-        exit(1);
-    }
+//    clnt_sock = socket(AF_INET, SOCK_STREAM, 0);
+//    if (clnt_sock < 0) {
+//        printf("sock() error\n");
+//        exit(1);
+//    }
 
-    memset(&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = inet_addr("192.168.1.109");
-    serv_addr.sin_port = htons(8899);
+//    memset(&serv_addr, 0, sizeof(serv_addr));
+//    serv_addr.sin_family = AF_INET;
+//    serv_addr.sin_addr.s_addr = inet_addr("192.168.1.109");
+//    serv_addr.sin_port = htons(8899);
 
-    if (connect(clnt_sock,
-            (struct sockaddr*)&serv_addr,
-            sizeof(serv_addr)) == -1) {
-        printf("connect() error\n");
-        exit(1);
-    }
-    char * initMsg = "h1e";
-    write(clnt_sock, initMsg, strlen(initMsg));
-    usleep(500000);
-    char * stateMsg = "s1e";
-    write(clnt_sock, stateMsg, strlen(stateMsg));
+//    if (connect(clnt_sock,
+//            (struct sockaddr*)&serv_addr,
+//            sizeof(serv_addr)) == -1) {
+//        printf("connect() error\n");
+//        exit(1);
+//    }
+//    char * initMsg = "h1e";
+//    write(clnt_sock, initMsg, strlen(initMsg));
+//    usleep(500000);
+//    char * stateMsg = "s1e";
+//    write(clnt_sock, stateMsg, strlen(stateMsg));
 
 
     lastTime = clock();
@@ -60,6 +64,7 @@ int main(int argc, char *argv[]){
 //    for(int i = 1; i <= 18; i++) {
 //        dector.imageTest("/home/nvidia/Documents/images/" + to_string(i) + ".JPG");
 //    }
+    th1.join();
     close(clnt_sock);
     return 0;
 }
@@ -149,15 +154,15 @@ void MotroCarControl(){
     while(true){
         if(dector.readyToTurn) {
             if(dector.centre_y > dector.imageRows*2/3){
-                turn(640000, dector.command[dector.nodeIndex]);
+                turn(590000, dector.command[dector.nodeIndex]);
                 dector.nodeIndex++;
                 dector.readyToTurn = false;
             } else if(dector.centre_y > dector.imageRows/2){
-                turn(740000, dector.command[dector.nodeIndex]);
-                dector.nodeIndex++;
-                dector.readyToTurn = false;
+//                turn(740000, dector.command[dector.nodeIndex]);
+//                dector.nodeIndex++;
+//                dector.readyToTurn = false;
             } else if(dector.centre_y > dector.imageRows/3){
-                turn(880000, dector.command[dector.nodeIndex]);
+                turn(840000, dector.command[dector.nodeIndex]);
                 dector.nodeIndex++;
                 dector.readyToTurn = false;
             }
@@ -181,7 +186,7 @@ void setTimer(){
     sleep(1);
     while(true){
         double cur_time = clock();
-        if(cur_time - lastTime >= (6*CLOCKS_PER_SEC/100)) {
+        if(cur_time - lastTime >= (3*CLOCKS_PER_SEC/100)) {
             lastTime = cur_time;
             PIDControl();
         }
@@ -197,91 +202,89 @@ void turn(int time, int type){//4:turnRight 3:turnLeft 1:farword 5:stop
 
     sLock.lock();
     stop = true;
-    char buf1[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','#'};
-    QByteArray qb1(QByteArray::fromRawData(buf1, 13));
-    serial.send(qb1);
-    serial.send(qb1);
+    char send_buf_stop[8]="z 0 0;\r";
+    serial.send(send_buf_stop);
     if(type == 5){
         sLock.unlock();    
         char * stateMsg = "s2e";
         write(clnt_sock, stateMsg, strlen(stateMsg));
 //	cout << "arrive in destination!!!" << endl;
-	if(dector.nodeIndex > 0 && dector.decode_value != 132 && dector.decode_value != 512 && dector.decode_value == dector.stopNum){
-	    cout << "motor car unload !!!" << endl;
-    	    char buf_unload[13] = {'&','V','=','u','0','0','0','/','u','0','0','0','#'};
-    	    QByteArray qb_unload(QByteArray::fromRawData(buf_unload, 13));
-    	    serial.send(qb_unload);
-	}
+//	if(dector.nodeIndex > 0 && dector.decode_value != 132 && dector.decode_value != 512 && dector.decode_value == dector.stopNum){
+//	    cout << "motor car unload !!!" << endl;
+//    	    char buf_unload[13] = {'&','V','=','u','0','0','0','/','u','0','0','0','#'};
+//    	    QByteArray qb_unload(QByteArray::fromRawData(buf_unload, 13));
+////    	    serial.send(qb_unload);
+//	}
 	return;
     }
     cout << "motro car stop to turn!" << endl;
 
 //    usleep(1000000);
 
-    char buf2[13] = {'&','V','=','+','0','7','5','/','-','0','7','5','#'};
+    char send_buf_turn[10] = {'z',' ','5','0',' ','-','5','0',';','\r'};
     if(type == 4) {
-        buf2[3] = '+';
-        buf2[8] = '-';
+
         cout << "car turning right" << endl;
     } else if (type == 3) {
-        buf2[3] = '-';
-        buf2[8] = '+';
+
         cout << "car turning left" << endl;
     }
+    serial.send(send_buf_turn);
 
-    QByteArray qb2(QByteArray::fromRawData(buf2, 13));
-    serial.send(qb2);
-    serial.send(qb2);
     sLock.unlock();
 
-    usleep(1300000);
+    usleep(820000);
     
     sLock.lock();
-    char buf3[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','#'};
-    QByteArray qb3(QByteArray::fromRawData(buf3, 13));
-    serial.send(qb3);
-    serial.send(qb3);
+
+    serial.send(send_buf_stop);
     cout << "car finished turning, now going" << endl;
     sLock.unlock();
 
 //    usleep(1000000);
     stop = false;
+    finishedTurn = true;
     dector.turned = true;
 }
 
 void PIDControl(){
-    D_value = (int)(Kp * dector.position_err);
-//    cout << "D_value:" << D_value << endl;
-    unsigned char left_value = speed - D_value/2;
-    unsigned char right_value = speed + D_value/2;
-    string left_value_str;
-    string right_value_str;
-    if(left_value < 100) {
-        left_value_str = "0" + to_string(left_value);
+    double err_gap = last_position_err - dector.position_err;
+    last_position_err = dector.position_err;
+    if(finishedTurn){
+        pid_count++;
+        if(pid_count == 60){
+            pid_count = 0;
+            finishedTurn = false;
+        }
+        speed = 35;
+        Kd = 0;
+        Kp = 0.45;
     } else {
-        left_value_str = to_string(left_value);
+        speed = 20;
+        Kd = 4;
+        Kp = 0.12;
     }
 
-    if(right_value < 100) {
-        right_value_str = "0" + to_string(right_value);
-    } else {
-        right_value_str = to_string(right_value);
+    D_value = (int)(Kp * dector.position_err - Kd * err_gap);
+    if(D_value > MAX_D_VALUE){
+        D_value = MAX_D_VALUE;
+    } else if(D_value < (0 - MAX_D_VALUE)){
+        D_value = 0 - MAX_D_VALUE;
     }
+    int left_value = speed - D_value/2;
+    int right_value = speed + D_value/2;
 
-    string msg = "&V=" + left_value_str + "/" + right_value_str + "#";
-
-    char buf[13] = {'&','V','=','+','0','0','0','/','+','0','0','0','#'};
-    buf[4] = 48 + left_value/100;
-    buf[5] = 48 + (left_value - (buf[4] - 48)*100)/10;
-    buf[6] = 48 + (left_value - (buf[4] - 48)*100 - (buf[5] - 48)*10);
-    buf[9] = 48 + right_value/100;
-    buf[10] = 48 + (right_value - (buf[9] - 48)*100)/10;
-    buf[11] = 48 + (right_value - (buf[9] - 48)*100 - (buf[10] - 48)*10);
+    char send_buf[10]="z 10 10;\r";
+    send_buf[2] = 48 + left_value/10;
+    send_buf[3] = 48 + (left_value - (send_buf[2] - 48)*10);
+    send_buf[5] = 48 + right_value/10;
+    send_buf[6] = 48 + (right_value - (send_buf[5] - 48)*10);
 
     sLock.lock();
     if(!stop){
-        QByteArray qb(QByteArray::fromRawData(buf, 13));
-        serial.send(qb);
+
+//        cout << send_buf << endl;
+        serial.send(send_buf);
     }
     sLock.unlock();
 }

@@ -1,11 +1,11 @@
 #include "serial.h"
 #include <iostream>
 Serial::Serial(){
-    myCom = new Posix_QextSerialPort("/dev/ttyTHS2",QextSerialBase::Polling);
+    myCom = new Posix_QextSerialPort("/dev/ttyUSB0",QextSerialBase::Polling);
 
     myCom ->open(QIODevice::ReadWrite);
     //以读写方式打开串口
-    myCom->setBaudRate(BAUD57600);
+    myCom->setBaudRate(BAUD115200);
     //波特率设置，我们设置为9600
     myCom->setDataBits(DATA_8);
    //数据位设置，我们设置为8位数据位
