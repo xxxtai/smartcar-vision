@@ -18,7 +18,7 @@ double last_position_err = 0;
 int pid_count;
 float integral = 0;
 float Kp = 0.12,Ki = 0,Kd = 0.0;
-int speed = 20;
+int speed = 50;
 volatile bool stop = false;
 double lastTime = 0;
 void MotroCarControl();
@@ -260,7 +260,7 @@ void PIDControl(){
         Kd = 0;
         Kp = 0.45;
     } else {
-        speed = 20;
+        speed = 50;
         Kd = 4;
         Kp = 0.12;
     }
