@@ -1,4 +1,4 @@
-# 多AGV物流分拣系统的设计
+# 基于视觉导航机器人的快递分拣系统
 ## 论文摘要
 [知网论文地址](https://kns.cnki.net/KCMS/detail/detail.aspx?dbcode=CMFD&dbname=CMFD201802&filename=1018872311.nh&v=MTg3MTR6Z1Vyek9WRjI2RnJ1L0hOTE5ycEViUElSOGVYMUx1eFlTN0RoMVQzcVRyV00xRnJDVVI3cWZadWR0Rnk= "知网论文地址")  如果不方便下载，在issues留下邮箱，有空我会发给你
 
