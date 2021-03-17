@@ -15,7 +15,8 @@
 ### express 
 [github地址](https://github.com/xxxtai/express "github地址")
 
-调度系统是整个多AGV物流分拣系统的大脑，负责信息统筹、调度和控制快递分拣机器人。该工程基于java、swing、spring boot、neety等技术，实现了论文中所述三种路径规划算法：改进A*算法、dijkstra算法、贪婪算法，以及多机器人之间防冲突算法，结合simulator工程可以模拟大规模机器人的调度。[大规模机器人调度模拟](https://v.qq.com/x/page/c3050fw4ria.html)
+调度系统是整个多AGV物流分拣系统的大脑，负责信息统筹、调度和控制快递分拣机器人。该工程基于java、swing、spring boot、neety等技术，实现了论文中所述三种路径规划算法：改进A*算法、dijkstra算法、贪婪算法，以及多机器人之间防冲突算法，结合simulator工程可以模拟大规模机器人的调度。
+[大规模机器人调度模拟视频，点击观看](https://xxxtai-arthas-hot-swap.oss-cn-beijing.aliyuncs.com/moda/7560e2d688531d315c58816c94053f59.mp4)
 
 
 ### smartcar-vision
