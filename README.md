@@ -21,14 +21,14 @@
 ### smartcar-vision
 [github地址](https://github.com/xxxtai/smartcar-vision "github地址")
 
-[demo机器人视频](https://v.qq.com/x/page/v30506h0k6r.html "demo机器人视频")
+[demo机器人视频，点击观看](https://xxxtai-arthas-hot-swap.oss-cn-beijing.aliyuncs.com/moda/d4427af0b2261e1b2fe12b7d5fced3b6.mp4 "demo机器人视频")
 
 该工程是分拣机器人的大脑，实现了视觉导航、机器控制、调度，该工程基于C++、openCV、PID控制等技术，运行在Jeson Tk1嵌入式板（其实就是一个ubuntu系统），底层电机控制使用了Arduino。该工程依赖于硬件，有了这份代码也只有助于研究视觉导航的实现，很难实际运行起来。
 
 ### simulator
 [github地址](https://github.com/xxxtai/simulator "github地址")
 
-[大规模机器人调度模拟](https://v.qq.com/x/page/c3050fw4ria.html)
+[大规模机器人调度模拟视频，点击观看](https://xxxtai-arthas-hot-swap.oss-cn-beijing.aliyuncs.com/moda/7560e2d688531d315c58816c94053f59.mp4)
 
 一台分拣机器人造价不便宜，所以没有使用大规模真实机器人进行分拣实验。为了验证论文提出的算法的有效性，开发了本模拟软件，本工程模拟了机器人运行的物理特性，以及送料系统，使随机生成的快递包裹模拟放置在机器人托盘上，并完全适配于调度系统，调度系统没有特殊定制就可以像调度真实机器人一样调度模拟机器人。
 
@@ -62,14 +62,14 @@ The scheduling system is the brain of the whole multi AGV logistics sorting syst
 ### smartcar-vision
 [github地址](https://github.com/xxxtai/smartcar-vision "github地址")
 
-[Demo robot video](https://v.qq.com/x/page/v30506h0k6r.html "demo机器人视频")
+[Demo robot video](https://xxxtai-arthas-hot-swap.oss-cn-beijing.aliyuncs.com/moda/d4427af0b2261e1b2fe12b7d5fced3b6.mp4 "demo机器人视频")
 
 The project is the brain of sorting robot, which realizes visual navigation, machine control and scheduling. Based on C + +, opencv, PID control and other technologies, the project runs on the embedded board of Jason TK1 (in fact, it is a Ubuntu system). Arduino is used for the bottom motor control. The project depends on hardware, with this code only helps to study the implementation of visual navigation, it is difficult to actually run.
 
 ### simulator
 [github地址](https://github.com/xxxtai/simulator "github地址")
 
-[Large scale robot scheduling simulation](https://v.qq.com/x/page/c3050fw4ria.html)
+[Large scale robot scheduling simulation](https://xxxtai-arthas-hot-swap.oss-cn-beijing.aliyuncs.com/moda/7560e2d688531d315c58816c94053f59.mp4)
 
 A sorting robot is not cheap, so there is no large-scale robot sorting experiment. In order to verify the effectiveness of the algorithm proposed in this paper, the simulation software is developed. This project simulates the physical characteristics of the robot operation, and fully adapts to the scheduling system, which has no special customization.
 
